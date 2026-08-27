@@ -57,22 +57,48 @@ The full explanation lives in the app under **"how the light works."**
 
 ## Running it
 
-It's one file. No build, no dependencies, no keys.
+No dependencies, no keys. The source is plain ES modules:
 
 ```bash
-open index.html          # or serve it:
-python3 -m http.server 4173
+python3 -m http.server 4173     # then open http://localhost:4173
 ```
 
-The only external resource is Google Fonts (free, keyless); the app falls back to
-system fonts offline.
+`node build.js` bundles everything into a self-contained `dist/index.html`
+(no imports, inline CSS) for single-file hosting — that's also what the
+claude.ai artifact serves. The build is a line-level transform over this
+repo's conventions, not a compiler; still zero dependencies.
+
+```bash
+npm test        # node --test — 25 tests over the scorer, data, and homes
+npm run build   # emit dist/index.html
+```
+
+The only external resource is Google Fonts (free, keyless); the app falls
+back to system fonts offline.
+
+## Project layout
+
+```
+index.html          dev entry (markup + module script)
+styles/beacon.css   all styling
+src/util.js         $, store, clamp
+src/data.js         173 cities, fields, roles, continents, pay formula
+src/questions.js    the 26 questions
+src/scoring.js      the matching engine — pure, DOM-free, fully tested
+src/skyline.js      seeded generative skylines
+src/audio.js        generative score + reactive UI sound
+src/homes.js        seeded home listings + portal links (pure)
+src/main.js         views, rendering, lantern, profiles, wiring
+test/               node --test suites
+build.js            single-file bundler → dist/index.html
+```
 
 ## Roadmap
 
-- Split the single file into modules (data / scoring / audio / skylines / views)
-- Real authentication for profiles
-- Live job & housing feeds behind a small server (keys stay server-side)
-- A test suite around the scorer
+- [x] Split the single file into modules (data / scoring / audio / skylines / views)
+- [x] A test suite around the scorer (25 tests, `node --test`, zero deps)
+- [ ] Real authentication for profiles *(needs hosting)*
+- [ ] Live job & housing feeds behind a small server *(needs hosting; keys stay server-side)*
 
 ---
 

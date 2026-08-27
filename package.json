@@ -1,0 +1,11 @@
+{
+  "name": "beacon",
+  "version": "1.0.0",
+  "description": "Find the city that feels like you — a fully deterministic city-matching app.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.js"
+  },
+  "license": "MIT"
+}
