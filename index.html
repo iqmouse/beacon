@@ -1,0 +1,3542 @@
+<meta charset="utf-8">
+<title>Beacon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ephesis&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400;1,6..72,500&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  /* ---------- tokens ---------- */
+  :root{
+    --ground:#EEF3F4;
+    --ground-deep:#E2EAEB;
+    --ink:#1F3038;
+    --ink-soft:#4E626C;
+    --ink-faint:#7E9199;
+    --amber:#D89331;
+    --amber-soft:#E8B76A;
+    --amber-glow:rgba(226,160,59,.22);
+    --glass:#7BAFA5;
+    --card:#F7FAFA;
+    --card-edge:rgba(31,48,56,.10);
+    --beam:rgba(232,183,106,.16);
+    --haze1:rgba(123,175,165,.18);
+    --haze2:rgba(226,160,59,.12);
+    --shadow:0 18px 50px -18px rgba(31,48,56,.22);
+    --track:rgba(31,48,56,.14);
+    --scrim:rgba(31,48,56,.35);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1B22;
+      --ground-deep:#0A141A;
+      --ink:#E7EFEE;
+      --ink-soft:#A7BBC0;
+      --ink-faint:#6E858D;
+      --amber:#F0B24E;
+      --amber-soft:#F5C97E;
+      --amber-glow:rgba(240,178,78,.20);
+      --glass:#6FA79C;
+      --card:#15242C;
+      --card-edge:rgba(231,239,238,.10);
+      --beam:rgba(240,178,78,.10);
+      --haze1:rgba(111,167,156,.12);
+      --haze2:rgba(240,178,78,.08);
+      --shadow:0 18px 50px -18px rgba(0,0,0,.55);
+      --track:rgba(231,239,238,.16);
+      --scrim:rgba(4,10,14,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1B22;
+    --ground-deep:#0A141A;
+    --ink:#E7EFEE;
+    --ink-soft:#A7BBC0;
+    --ink-faint:#6E858D;
+    --amber:#F0B24E;
+    --amber-soft:#F5C97E;
+    --amber-glow:rgba(240,178,78,.20);
+    --glass:#6FA79C;
+    --card:#15242C;
+    --card-edge:rgba(231,239,238,.10);
+    --beam:rgba(240,178,78,.10);
+    --haze1:rgba(111,167,156,.12);
+    --haze2:rgba(240,178,78,.08);
+    --shadow:0 18px 50px -18px rgba(0,0,0,.55);
+    --track:rgba(231,239,238,.16);
+    --scrim:rgba(4,10,14,.55);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:'Karla',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    line-height:1.55;
+  }
+
+  /* ---------- ambient sky ---------- */
+  .sky{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(60% 45% at 75% 12%, var(--haze2), transparent 70%),
+      radial-gradient(55% 50% at 18% 85%, var(--haze1), transparent 70%),
+      linear-gradient(180deg, var(--ground) 0%, var(--ground-deep) 100%);
+  }
+  .beam{
+    position:fixed; z-index:0; pointer-events:none;
+    width:140vmax; height:140vmax;
+    left:50%; top:-70vmax; transform-origin:50% 50%;
+    translate:-50% 0;
+    background:conic-gradient(from 0deg,
+      transparent 0deg, transparent 168deg,
+      var(--beam) 176deg, var(--beam) 184deg,
+      transparent 192deg, transparent 360deg);
+    animation:sweep 26s linear infinite;
+    opacity:.9;
+  }
+  @keyframes sweep{ from{rotate:0deg} to{rotate:360deg} }
+  .drift{
+    position:fixed; z-index:0; pointer-events:none; border-radius:50%;
+    filter:blur(60px);
+  }
+  .drift.a{ width:44vmin; height:44vmin; background:var(--haze1); left:-10vmin; top:12vh; animation:driftA 34s ease-in-out infinite alternate;}
+  .drift.b{ width:36vmin; height:36vmin; background:var(--haze2); right:-8vmin; bottom:8vh; animation:driftB 41s ease-in-out infinite alternate;}
+  @keyframes driftA{ from{transform:translate(0,0)} to{transform:translate(9vmin,-7vmin)} }
+  @keyframes driftB{ from{transform:translate(0,0)} to{transform:translate(-8vmin,6vmin)} }
+
+  /* ambient horizon skyline on the hero */
+  .hero-strip{
+    position:fixed; left:0; right:0; bottom:0; height:130px;
+    overflow:hidden; z-index:0; pointer-events:none;
+  }
+  .hero-strip canvas{ display:block; height:130px; animation:panHero 160s linear infinite; }
+  @keyframes panHero{ to{ transform:translateX(-1200px); } }
+
+  /* ---------- stage & views ---------- */
+  .stage{
+    position:relative; z-index:1;
+    min-height:100vh;
+    display:grid; place-items:center;
+    padding:6vh 20px 10vh;
+  }
+  .view{ display:none; width:min(720px,100%); }
+  .view.active{ display:block; animation:rise .7s cubic-bezier(.22,.8,.3,1) both; }
+  @keyframes rise{
+    from{opacity:0; transform:translateY(26px)}
+    to{opacity:1; transform:translateY(0)}
+  }
+  .view.leaving{ animation:sink .38s ease-in both; }
+  @keyframes sink{
+    from{opacity:1; transform:translateY(0)}
+    to{opacity:0; transform:translateY(-18px)}
+  }
+
+  /* ---------- type ---------- */
+  .script{
+    font-family:'Ephesis','Newsreader',cursive;
+    font-weight:400; line-height:1.05;
+  }
+  .wordmark{
+    font-size:clamp(4.5rem, 14vw, 8.5rem);
+    text-align:center; margin:0;
+    position:relative;
+  }
+  .wordmark .lit{
+    color:inherit;
+    animation:lampGlow 4.5s ease-in-out infinite;
+  }
+  @keyframes lampGlow{
+    0%,100%{ text-shadow:0 0 8px var(--amber-glow), 0 0 22px var(--amber-glow), 0 0 48px var(--amber-glow); }
+    50%    { text-shadow:0 0 12px var(--amber-soft), 0 0 34px var(--amber), 0 0 80px var(--amber-glow); }
+  }
+  h2.q-title{
+    font-family:'Newsreader',Georgia,serif;
+    font-weight:300; font-style:italic;
+    font-size:clamp(1.7rem, 4.5vw, 2.4rem);
+    line-height:1.25; text-wrap:balance;
+    margin:0 0 .4em; text-align:center;
+  }
+  .eyebrow{
+    font-size:.72rem; font-weight:600; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--ink-faint);
+    text-align:center; margin-bottom:1.1rem;
+  }
+  .tagline{
+    font-family:'Newsreader',Georgia,serif; font-style:italic; font-weight:300;
+    font-size:clamp(1.15rem,3vw,1.45rem);
+    color:var(--ink-soft); text-align:center; text-wrap:balance;
+    margin:0.4rem auto 0; max-width:26em;
+  }
+  .whisper{
+    text-align:center; color:var(--ink-faint); font-size:.88rem; margin-top:1rem;
+  }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    font-family:'Karla',sans-serif; font-weight:600; font-size:1rem;
+    border:none; cursor:pointer; border-radius:999px;
+    padding:.9rem 2.2rem;
+    background:var(--amber); color:#1E1607;
+    box-shadow:0 10px 30px -8px var(--amber-glow), var(--shadow);
+    transition:transform .35s cubic-bezier(.22,.8,.3,1), box-shadow .35s;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 16px 36px -8px var(--amber-glow), var(--shadow); }
+  .btn:focus-visible, .btn2:focus-visible, .opt:focus-visible, .chip:focus-visible,
+  .ghost:focus-visible, .cmp-select:focus-visible, .fab:focus-visible, .save:focus-visible{
+    outline:2px solid var(--amber); outline-offset:3px;
+  }
+  .btn[disabled]{ opacity:.35; cursor:default; transform:none; }
+  .btn2{
+    font-family:'Karla',sans-serif; font-weight:600; font-size:.92rem;
+    background:none; color:var(--ink);
+    border:1px solid var(--card-edge); border-radius:999px;
+    padding:.7rem 1.5rem; cursor:pointer;
+    transition:border-color .3s, transform .3s;
+  }
+  .btn2:hover{ border-color:var(--amber); transform:translateY(-2px); }
+  .ghost{
+    background:none; border:none; cursor:pointer;
+    font-family:'Karla',sans-serif; font-size:.9rem; font-weight:500;
+    color:var(--ink-faint); padding:.5rem .9rem; border-radius:999px;
+    transition:color .3s;
+  }
+  .ghost:hover{ color:var(--ink); }
+  .cta-row{ display:flex; justify-content:center; gap:.8rem; margin-top:2.4rem; flex-wrap:wrap; align-items:center; }
+
+  /* ---------- corner controls ---------- */
+  .fabs{ position:fixed; top:14px; right:16px; z-index:9; display:flex; gap:8px; }
+  .fab{
+    width:42px; height:42px; border-radius:50%;
+    background:var(--card); border:1px solid var(--card-edge);
+    color:var(--ink-soft); cursor:pointer;
+    display:grid; place-items:center; position:relative;
+    transition:border-color .3s, transform .3s, color .3s;
+    box-shadow:var(--shadow);
+  }
+  .fab:hover{ border-color:var(--amber); transform:translateY(-2px); color:var(--ink); }
+  .fab svg .flame{ fill:var(--amber); stroke:none; }
+  .fab .badge{
+    position:absolute; top:-4px; right:-5px;
+    min-width:18px; height:18px; border-radius:9px;
+    background:var(--amber); color:#1E1607;
+    font-size:.68rem; font-weight:700;
+    display:grid; place-items:center; padding:0 5px;
+    opacity:0; transform:scale(.4);
+    transition:opacity .3s, transform .45s cubic-bezier(.2,1.6,.4,1);
+  }
+  .fab .badge.show{ opacity:1; transform:scale(1); }
+  .fab .badge.pop{ animation:pop .5s cubic-bezier(.2,1.8,.4,1); }
+  @keyframes pop{ 0%{transform:scale(1)} 40%{transform:scale(1.45)} 100%{transform:scale(1)} }
+
+  /* ---------- lantern drawer ---------- */
+  .scrim{
+    position:fixed; inset:0; z-index:10;
+    background:var(--scrim); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .45s;
+  }
+  .scrim.open{ opacity:1; pointer-events:auto; }
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0; z-index:11;
+    width:min(380px, 92vw);
+    background:var(--card); border-left:1px solid var(--card-edge);
+    box-shadow:-24px 0 70px rgba(0,0,0,.28);
+    transform:translateX(103%);
+    transition:transform .55s cubic-bezier(.22,.8,.3,1);
+    display:flex; flex-direction:column;
+  }
+  .drawer.open{ transform:none; }
+  .drawer header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:1.1rem 1.4rem .9rem; border-bottom:1px solid var(--card-edge);
+  }
+  .drawer header .script{ font-size:2.3rem; color:var(--amber); margin:0; }
+  .drawer header .ghost{ font-size:1.1rem; }
+  .lantern-list{ overflow-y:auto; flex:1; padding:.6rem 1.4rem 1.4rem; }
+  .lgroup{
+    font-size:.7rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-faint); margin:1.2rem 0 .2rem;
+  }
+  .litem{
+    display:flex; justify-content:space-between; align-items:center; gap:.8rem;
+    padding:.75rem 0; border-bottom:1px solid var(--card-edge);
+  }
+  .litem h5{ margin:0; font-family:'Newsreader',serif; font-weight:400; font-size:1.02rem; }
+  .litem .sub{ font-size:.78rem; color:var(--ink-faint); margin-top:.1rem; }
+  .litem .ghost{ padding:.3rem .6rem; }
+  .lantern-empty{
+    font-family:'Newsreader',serif; font-style:italic; font-weight:300;
+    color:var(--ink-faint); text-align:center; padding:3.5rem 1.4rem;
+    text-wrap:balance;
+  }
+
+  /* ---------- quiz ---------- */
+  .progress{
+    display:flex; align-items:center; gap:12px;
+    justify-content:center; margin-bottom:2.2rem;
+  }
+  .progress .bar{
+    width:min(220px,40vw); height:2px; border-radius:2px;
+    background:var(--track); overflow:hidden;
+  }
+  .progress .bar i{
+    display:block; height:100%; background:var(--amber);
+    width:0%; transition:width .6s cubic-bezier(.22,.8,.3,1);
+  }
+  .progress .count{
+    font-size:.75rem; letter-spacing:.14em; color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+
+  .q-body{ margin-top:2rem; }
+  .opts{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:540px){ .opts{ grid-template-columns:1fr; } }
+  .opt{
+    font-family:'Newsreader',Georgia,serif; font-style:italic; font-weight:400;
+    font-size:1.12rem; line-height:1.35; text-align:left;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--card-edge); border-radius:18px;
+    padding:1.15rem 1.3rem; cursor:pointer;
+    transition:transform .35s cubic-bezier(.22,.8,.3,1), border-color .3s, box-shadow .35s;
+  }
+  .opt:hover{ transform:translateY(-3px); border-color:var(--amber-soft); box-shadow:var(--shadow); }
+  .opt.picked{ border-color:var(--amber); box-shadow:0 0 0 1px var(--amber), var(--shadow); }
+  .opt small{
+    display:block; font-family:'Karla',sans-serif; font-style:normal;
+    font-size:.78rem; color:var(--ink-faint); margin-top:.35rem;
+  }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .chip{
+    font-family:'Karla',sans-serif; font-size:.95rem; font-weight:500;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--card-edge); border-radius:999px;
+    padding:.65rem 1.25rem; cursor:pointer;
+    transition:transform .3s, border-color .3s;
+  }
+  .chip:hover{ transform:translateY(-2px); border-color:var(--amber-soft); }
+  .chip.picked{ background:var(--amber); border-color:var(--amber); color:#1E1607; font-weight:600; }
+
+  .slider-wrap{ padding:1.2rem 0 .4rem; }
+  .slider-labels{
+    display:flex; justify-content:space-between;
+    font-family:'Newsreader',Georgia,serif; font-style:italic;
+    font-size:1rem; color:var(--ink-soft); margin-bottom:1rem; gap:1rem;
+  }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%;
+    height:2px; background:var(--track); border-radius:2px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--amber); border:none; cursor:grab;
+    box-shadow:0 0 0 8px var(--amber-glow);
+    transition:box-shadow .3s;
+  }
+  input[type=range]::-webkit-slider-thumb:active{ cursor:grabbing; box-shadow:0 0 0 14px var(--amber-glow); }
+  input[type=range]::-moz-range-thumb{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--amber); border:none; cursor:grab;
+    box-shadow:0 0 0 8px var(--amber-glow);
+  }
+  .q-nav{ display:flex; justify-content:space-between; align-items:center; margin-top:2.4rem; }
+  .q-hint{ text-align:center; font-size:.75rem; color:var(--ink-faint); margin-top:1.2rem; }
+
+  /* ---------- results ---------- */
+  .results-head .script{
+    font-size:clamp(2.6rem,8vw,4rem); text-align:center; margin:0;
+    color:var(--amber);
+  }
+  .results-sub{ text-align:center; font-size:.8rem; color:var(--ink-faint); margin-top:.6rem; }
+  .match-list{ display:flex; flex-direction:column; gap:18px; margin-top:2.2rem; }
+  .match{
+    background:var(--card); border:1px solid var(--card-edge);
+    border-radius:22px; padding:0; overflow:hidden;
+    box-shadow:var(--shadow);
+    opacity:0; animation:rise .8s cubic-bezier(.22,.8,.3,1) forwards;
+  }
+  .match:nth-child(1){ animation-delay:.15s }
+  .match:nth-child(2){ animation-delay:.35s }
+  .match:nth-child(3){ animation-delay:.55s }
+  .match-body{ padding:1.3rem 1.6rem 1.5rem; }
+  .strip{ height:104px; overflow:hidden; }
+  .strip canvas{ display:block; height:150px; animation:panStrip 70s linear infinite; }
+  @keyframes panStrip{ to{ transform:translateX(-720px); } }
+  .match-top{ display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .match-name{
+    font-family:'Newsreader',Georgia,serif; font-weight:400;
+    font-size:1.7rem; margin:0; line-height:1.15;
+  }
+  .match-name small{
+    display:block; font-family:'Karla',sans-serif; font-size:.78rem;
+    font-weight:500; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-faint); margin-top:.2rem;
+  }
+  .match-pct{
+    font-family:'Newsreader',Georgia,serif; font-style:italic;
+    font-size:2rem; color:var(--amber); font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .match-pct small{ font-size:.9rem; color:var(--ink-faint); font-family:'Karla',sans-serif; font-style:normal; }
+  .match-why{
+    font-family:'Newsreader',Georgia,serif; font-style:italic; font-weight:300;
+    color:var(--ink-soft); margin:.7rem 0 1rem; font-size:1.05rem;
+  }
+  .fitbars{ display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem 1.6rem; margin-bottom:1.2rem; }
+  @media (max-width:540px){ .fitbars{ grid-template-columns:1fr; } }
+  .fitbar{ font-size:.78rem; color:var(--ink-faint); }
+  .fitbar .lbl{ display:flex; justify-content:space-between; margin-bottom:4px; font-variant-numeric:tabular-nums; }
+  .fitbar .rail{ height:3px; border-radius:2px; background:var(--track); overflow:hidden; }
+  .fitbar .rail i{ display:block; height:100%; background:var(--glass); width:0%; transition:width 1.1s cubic-bezier(.22,.8,.3,1) .4s; }
+  .match .jobs-btn{
+    background:none; border:1px solid var(--card-edge); color:var(--ink);
+    border-radius:999px; padding:.6rem 1.4rem; cursor:pointer;
+    font-family:'Karla',sans-serif; font-weight:600; font-size:.9rem;
+    transition:border-color .3s, background .3s, transform .3s;
+  }
+  .match .jobs-btn:hover{ border-color:var(--amber); transform:translateY(-2px); }
+
+  /* ---------- continents ---------- */
+  .cont-head{ margin-top:2.8rem; }
+  .cont-sub{
+    text-align:center; font-family:'Newsreader',Georgia,serif; font-style:italic;
+    font-weight:300; color:var(--ink-soft); margin:-.6rem 0 1.2rem;
+  }
+  .cont-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:560px){ .cont-grid{ grid-template-columns:1fr; } }
+  .cont-card{
+    background:var(--card); border:1px solid var(--card-edge);
+    border-radius:18px; padding:1rem 1.25rem; box-shadow:var(--shadow);
+  }
+  .cont-card h4{
+    margin:0 0 .3rem; font-size:.7rem; font-weight:600;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint);
+  }
+  .cont-row{
+    display:flex; align-items:baseline; gap:.6rem;
+    padding:.5rem 0; border-top:1px solid var(--card-edge);
+    cursor:pointer; transition:transform .25s;
+  }
+  .cont-row:hover{ transform:translateX(3px); }
+  .cont-row:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; border-radius:6px; }
+  .cont-row .nm{ font-family:'Newsreader',Georgia,serif; font-size:1.02rem; flex:1; }
+  .cont-row .nm small{ color:var(--ink-faint); font-family:'Karla',sans-serif; font-size:.7rem; margin-left:.4rem; }
+  .cont-row .pc{
+    font-family:'Newsreader',Georgia,serif; font-style:italic;
+    color:var(--amber); font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- compare ---------- */
+  .cmp-head .script{ font-size:clamp(2.4rem,7vw,3.4rem); text-align:center; margin:0; color:var(--amber); }
+  .cmp-cols{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    margin:2rem 0 1.4rem;
+  }
+  .cmp-col{ text-align:center; }
+  .cmp-select{
+    width:100%; font-family:'Newsreader',Georgia,serif; font-size:1.15rem;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--card-edge); border-radius:14px;
+    padding:.75rem .9rem; cursor:pointer;
+    appearance:none; -webkit-appearance:none; text-align:center;
+    transition:border-color .3s;
+  }
+  .cmp-select:hover{ border-color:var(--amber-soft); }
+  .cmp-fit{
+    font-family:'Newsreader',Georgia,serif; font-style:italic;
+    color:var(--amber); font-size:1.25rem; margin-top:.5rem;
+    font-variant-numeric:tabular-nums;
+  }
+  .cmp-fit small{ color:var(--ink-faint); font-family:'Karla',sans-serif; font-style:normal; font-size:.78rem; }
+  .cmp-card{
+    background:var(--card); border:1px solid var(--card-edge); border-radius:22px;
+    box-shadow:var(--shadow); padding:1.5rem 1.6rem;
+  }
+  .cmp-row{
+    display:grid; grid-template-columns:1fr 130px 1fr;
+    align-items:center; gap:12px; padding:.55rem 0;
+  }
+  .cmp-row + .cmp-row{ border-top:1px solid var(--card-edge); }
+  .cmp-mid{
+    text-align:center; font-size:.72rem; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);
+  }
+  .cmp-rail{ height:4px; border-radius:2px; background:var(--track); overflow:hidden; }
+  .cmp-rail i{ display:block; height:100%; background:var(--glass); border-radius:2px; transition:width .9s cubic-bezier(.22,.8,.3,1); }
+  .cmp-rail.win i{ background:var(--amber); }
+  .cmp-rail.L{ transform:scaleX(-1); }
+  .cmp-legend{ text-align:center; font-size:.75rem; color:var(--ink-faint); margin-top:1rem; }
+  .cmp-legend b{ color:var(--amber); font-weight:600; }
+  .cmp-facts{ margin-top:1.2rem; }
+  .cmp-fact{
+    display:grid; grid-template-columns:1fr 150px 1fr;
+    gap:12px; padding:.45rem 0; align-items:baseline;
+    font-size:.9rem; font-variant-numeric:tabular-nums;
+  }
+  .cmp-fact + .cmp-fact{ border-top:1px solid var(--card-edge); }
+  .cmp-fact .v{ text-align:center; }
+  .cmp-fact .v.a{ text-align:right; }
+  .cmp-fact .k{
+    text-align:center; font-size:.72rem; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);
+  }
+
+  /* ---------- share ---------- */
+  .share-head .script{ font-size:clamp(2.4rem,7vw,3.4rem); text-align:center; margin:0; color:var(--amber); }
+  .share-wrap{ display:flex; justify-content:center; margin-top:1.8rem; }
+  .share-wrap img{
+    width:min(400px, 88vw); border-radius:20px;
+    box-shadow:var(--shadow); border:1px solid var(--card-edge);
+  }
+  .share-note{ text-align:center; font-size:.82rem; color:var(--ink-faint); margin-top:1rem; }
+
+  /* ---------- jobs ---------- */
+  .jobs-head .script{ font-size:clamp(2.4rem,7vw,3.4rem); text-align:center; margin:0; color:var(--amber); }
+  .jobs-sub{ text-align:center; color:var(--ink-soft); font-family:'Newsreader',serif; font-style:italic; margin:.4rem 0 1.6rem; }
+  .jobs-strip{ height:104px; overflow:hidden; border-radius:18px; margin-bottom:1.4rem; box-shadow:var(--shadow); }
+  .jobs-strip canvas{ display:block; height:150px; animation:panStrip 60s linear infinite; }
+  .job-list{ display:flex; flex-direction:column; gap:14px; }
+  .job{
+    background:var(--card); border:1px solid var(--card-edge); border-radius:18px;
+    padding:1.1rem 1.3rem;
+    display:flex; justify-content:space-between; align-items:center; gap:1rem;
+    opacity:0; animation:rise .7s cubic-bezier(.22,.8,.3,1) forwards;
+    transition:transform .3s, border-color .3s;
+  }
+  .job:hover{ transform:translateY(-2px); border-color:var(--amber-soft); }
+  .job:nth-child(1){animation-delay:.1s}.job:nth-child(2){animation-delay:.22s}
+  .job:nth-child(3){animation-delay:.34s}.job:nth-child(4){animation-delay:.46s}
+  .job:nth-child(5){animation-delay:.58s}
+  .job h4{ margin:0; font-family:'Newsreader',serif; font-weight:400; font-size:1.15rem; }
+  .job .co{ font-size:.85rem; color:var(--ink-soft); margin-top:.15rem; }
+  .job .meta{ display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+  .tag{
+    font-size:.7rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    padding:.22rem .6rem; border-radius:999px;
+    background:var(--track); color:var(--ink-soft);
+  }
+  .tag.pay{ background:var(--amber-glow); color:var(--amber); }
+  .save{
+    background:none; border:none; cursor:pointer; font-size:1.3rem;
+    color:var(--ink-faint); transition:transform .3s, color .3s; line-height:1;
+    padding:.4rem;
+  }
+  .save:hover{ transform:scale(1.15); }
+  .save.on{ color:var(--amber); }
+  .jobs-nav{ display:flex; justify-content:center; gap:.6rem; margin-top:2rem; flex-wrap:wrap; }
+  .foot-note{ text-align:center; font-size:.75rem; color:var(--ink-faint); margin-top:1.6rem; }
+
+  .toast{
+    position:fixed; left:50%; bottom:28px; translate:-50% 0; z-index:20;
+    background:var(--ink); color:var(--ground);
+    font-size:.85rem; padding:.7rem 1.3rem; border-radius:999px;
+    opacity:0; pointer-events:none; transition:opacity .4s, transform .4s;
+    transform:translateY(8px);
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  /* ---------- reveal moment ---------- */
+  .reveal{
+    position:fixed; inset:0; z-index:30;
+    background:linear-gradient(180deg,#101C24 0%,#0A141A 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .8s ease;
+    overflow:hidden; cursor:pointer;
+  }
+  .reveal.on{ opacity:1; pointer-events:auto; }
+  .reveal .eyebrow{ color:#6E858D; position:relative; z-index:2; animation:rise 1.2s ease .3s both; }
+  .reveal-name{
+    font-family:'Ephesis','Newsreader',cursive; font-weight:400;
+    font-size:clamp(4rem,15vw,9rem); line-height:1.1; margin:0;
+    color:#F0B24E; text-align:center; position:relative; z-index:2;
+    text-shadow:0 0 24px rgba(240,178,78,.55), 0 0 90px rgba(240,178,78,.35);
+    animation:revealName 1.6s cubic-bezier(.22,.8,.3,1) .6s both;
+  }
+  @keyframes revealName{
+    from{opacity:0; transform:translateY(30px) scale(.96); filter:blur(6px);}
+    to{opacity:1; transform:none; filter:none;}
+  }
+  .reveal-sub{
+    font-family:'Newsreader',serif; font-style:italic; font-weight:300;
+    color:#A7BBC0; font-size:1.1rem; position:relative; z-index:2;
+    animation:rise 1.2s ease 1.5s both;
+  }
+  .reveal-canvas-wrap{ position:absolute; left:0; right:0; bottom:0; overflow:hidden; z-index:1; }
+  .reveal-canvas-wrap canvas{ display:block; animation:panHero 120s linear infinite; }
+  .reveal-hint{
+    position:absolute; bottom:18px; left:0; right:0; text-align:center;
+    font-size:.75rem; color:rgba(231,239,238,.4); z-index:2;
+    animation:rise 1s ease 2.4s both;
+  }
+
+  /* ---------- profile (beacon book) ---------- */
+  .prof-row{
+    display:flex; align-items:center; gap:.8rem;
+    padding:.7rem 0; border-top:1px solid var(--card-edge); cursor:pointer;
+    transition:transform .25s;
+  }
+  .prof-row:hover{ transform:translateX(3px); }
+  .prof-row .pn{ font-family:'Newsreader',serif; font-size:1.1rem; flex:1; }
+  .prof-row .pn small{ display:block; font-family:'Karla',sans-serif; font-size:.72rem; color:var(--ink-faint); }
+  .prof-row .open-btn{ font-size:.8rem; color:var(--amber); font-weight:600; }
+  .prof-active{
+    background:var(--amber-glow); border-radius:12px; padding:.7rem .9rem;
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:.8rem;
+  }
+  .prof-active b{ font-family:'Newsreader',serif; font-weight:400; font-size:1.05rem; }
+  .prof-new{ display:flex; gap:.6rem; margin-top:1rem; }
+  .prof-new input{ flex:1; }
+  .sync-chip{
+    font-size:.68rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-faint); padding:.2rem .6rem; border-radius:999px; background:var(--track);
+  }
+  .sync-chip.on{ color:var(--amber); background:var(--amber-glow); }
+
+  /* ---------- homes ---------- */
+  .home-filters{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    justify-content:center; margin-bottom:1.2rem;
+  }
+  .home-budget{ display:flex; align-items:center; gap:.7rem; width:100%; max-width:420px; }
+  .home-budget input{ flex:1; }
+  .home-budget .bval{
+    font-family:'Newsreader',serif; font-style:italic; color:var(--amber);
+    font-variant-numeric:tabular-nums; min-width:5.2em; text-align:right;
+  }
+  .portal-row{ display:flex; justify-content:center; gap:.7rem; flex-wrap:wrap; margin-top:1.6rem; }
+
+  /* ---------- api modal ---------- */
+  .modal-wrap{
+    position:fixed; inset:0; z-index:15; display:grid; place-items:center;
+    background:var(--scrim); opacity:0; pointer-events:none; transition:opacity .35s;
+    padding:20px;
+  }
+  .modal-wrap.on{ opacity:1; pointer-events:auto; }
+  .modal{
+    width:min(440px,94vw); background:var(--card);
+    border:1px solid var(--card-edge); border-radius:22px;
+    box-shadow:var(--shadow); padding:1.6rem 1.7rem;
+    transform:translateY(14px); transition:transform .4s cubic-bezier(.22,.8,.3,1);
+    cursor:auto;
+  }
+  .modal-wrap.on .modal{ transform:none; }
+  .modal h3{ font-family:'Newsreader',serif; font-weight:400; margin:0 0 .3rem; font-size:1.4rem; }
+  .modal p{ font-size:.85rem; color:var(--ink-soft); margin:.3rem 0 1rem; line-height:1.5; }
+  .modal label{ display:block; font-size:.72rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin:.8rem 0 .3rem; }
+  .modal input{
+    width:100%; font-family:'Karla',sans-serif; font-size:.95rem;
+    background:var(--ground); color:var(--ink);
+    border:1px solid var(--card-edge); border-radius:10px; padding:.6rem .8rem;
+  }
+  .modal input:focus{ outline:2px solid var(--amber); outline-offset:1px; }
+  .modal .row{ display:flex; gap:.6rem; justify-content:flex-end; margin-top:1.3rem; }
+  .modal a{ color:var(--amber); }
+  .src-note{ text-align:center; font-size:.75rem; color:var(--ink-faint); margin:-.9rem 0 1.2rem; }
+
+  @media (prefers-reduced-motion: reduce){
+    .beam,.drift,.wordmark .lit,.strip canvas,.jobs-strip canvas,.hero-strip canvas,.reveal-canvas-wrap canvas{ animation:none !important; }
+    .wordmark .lit{ text-shadow:0 0 12px var(--amber-soft), 0 0 34px var(--amber), 0 0 80px var(--amber-glow); }
+    .view.active,.match,.job,.reveal-name,.reveal .eyebrow,.reveal-sub,.reveal-hint{ animation-duration:.01s !important; animation-delay:0s !important; }
+    *{ transition-duration:.01s !important; }
+  }
+</style>
+
+<div class="sky"></div>
+<div class="beam"></div>
+<div class="drift a"></div>
+<div class="drift b"></div>
+<div class="hero-strip" id="hero-strip"><canvas id="hero-canvas" height="130"></canvas></div>
+
+<!-- corner controls -->
+<div class="fabs">
+  <button class="fab" id="prof-fab" aria-label="Your Beacon book" title="Your Beacon book">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8.6" r="3.6"/>
+      <path d="M4.8 20.2c1.4-3.6 4-5.4 7.2-5.4s5.8 1.8 7.2 5.4"/>
+    </svg>
+  </button>
+  <button class="fab" id="sound-fab" aria-label="Toggle music" title="Music"></button>
+  <button class="fab" id="lantern-fab" aria-label="Open your lantern of saved jobs" title="Your lantern">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2.5v2"/>
+      <path d="M9.5 6.5l1-2h3l1 2z"/>
+      <rect x="8" y="6.5" width="8" height="10.5" rx="3.2"/>
+      <circle class="flame" cx="12" cy="11.5" r="2.1"/>
+      <path d="M10.2 17l.5 2.3h2.6l.5-2.3"/>
+    </svg>
+    <span class="badge" id="lantern-badge">0</span>
+  </button>
+</div>
+
+<!-- lantern drawer -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Saved jobs">
+  <header>
+    <h3 class="script">Your lantern</h3>
+    <button class="ghost" id="drawer-close" aria-label="Close">&#10005;</button>
+  </header>
+  <div class="lantern-list" id="lantern-list"></div>
+</aside>
+
+<div class="stage">
+
+  <!-- HERO -->
+  <section class="view active" id="view-hero">
+    <h1 class="script wordmark">Bea<span class="lit">c</span>on</h1>
+    <p class="tagline">Somewhere out there is a city that already feels like you. Let&rsquo;s go find it &mdash; and the work you&rsquo;d love once you&rsquo;re there.</p>
+    <div class="cta-row">
+      <button class="btn" id="begin">Begin the search</button>
+    </div>
+    <p class="whisper">twenty-six questions &middot; one unhurried wander</p>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="view" id="view-quiz">
+    <div class="progress">
+      <span class="count" id="prog-count">1 / 20</span>
+      <div class="bar"><i id="prog-fill"></i></div>
+    </div>
+    <div id="q-holder"></div>
+    <div class="q-nav">
+      <button class="ghost" id="q-back">&larr; back</button>
+      <button class="btn" id="q-next" disabled>continue</button>
+    </div>
+    <p class="q-hint">press <b>enter</b> to keep moving</p>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="view" id="view-results">
+    <div class="results-head">
+      <p class="eyebrow">The light points toward</p>
+      <h2 class="script" id="top-city-script">&nbsp;</h2>
+      <p class="results-sub">matched across ten dimensions &middot; 173 cities</p>
+    </div>
+    <div class="match-list" id="match-list"></div>
+    <div class="cont-head">
+      <p class="eyebrow">Around the world</p>
+      <p class="cont-sub">your top three on every continent</p>
+    </div>
+    <div class="cont-grid" id="cont-grid"></div>
+    <div class="cta-row">
+      <button class="btn2" id="to-compare">compare side by side</button>
+      <button class="btn2" id="to-share">create my card</button>
+      <button class="ghost" id="how-open">how the light works</button>
+      <button class="ghost" id="restart">wander again</button>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="view" id="view-compare">
+    <div class="cmp-head">
+      <p class="eyebrow">Side by side</p>
+      <h2 class="script">Compare</h2>
+    </div>
+    <div class="cmp-cols">
+      <div class="cmp-col">
+        <select class="cmp-select" id="cmp-a" aria-label="First city"></select>
+        <div class="cmp-fit" id="cmp-fit-a">&nbsp;</div>
+      </div>
+      <div class="cmp-col">
+        <select class="cmp-select" id="cmp-b" aria-label="Second city"></select>
+        <div class="cmp-fit" id="cmp-fit-b">&nbsp;</div>
+      </div>
+    </div>
+    <div class="cmp-card">
+      <div id="cmp-dims"></div>
+      <p class="cmp-legend"><b>&#9679;</b> amber marks the city closer to your answers</p>
+    </div>
+    <div class="cmp-card cmp-facts" id="cmp-facts"></div>
+    <div class="cta-row">
+      <button class="ghost" id="cmp-back">&larr; back to matches</button>
+    </div>
+    <p class="foot-note">Rents: Numbeo, 2026 &middot; Sunshine: Wikipedia &amp; climate normals &middot; Populations: approximate metro figures.</p>
+  </section>
+
+  <!-- SHARE -->
+  <section class="view" id="view-share">
+    <div class="share-head">
+      <p class="eyebrow">Carry the light</p>
+      <h2 class="script">Your card</h2>
+    </div>
+    <div class="share-wrap"><img id="share-img" alt="Your Beacon results card"></div>
+    <p class="share-note">Right-click or press-and-hold the card to save it as an image.</p>
+    <div class="cta-row">
+      <button class="btn2" id="copy-text">copy as text</button>
+      <button class="ghost" id="share-back">&larr; back to matches</button>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section class="view" id="view-jobs">
+    <div class="jobs-head">
+      <p class="eyebrow">Now hiring in</p>
+      <h2 class="script" id="jobs-city">&nbsp;</h2>
+      <p class="jobs-sub" id="jobs-sub"></p>
+      <p class="src-note" id="jobs-src"></p>
+    </div>
+    <div class="jobs-strip"><canvas id="jobs-canvas" height="150"></canvas></div>
+    <div class="job-list" id="job-list"></div>
+    <div class="jobs-nav">
+      <button class="ghost" id="jobs-back">&larr; back to matches</button>
+      <button class="ghost" id="jobs-homes">find a home here</button>
+      <button class="ghost" id="jobs-restart">start over</button>
+    </div>
+    <p class="foot-note">Listings and pay are a deterministic formula over each city&rsquo;s industries and cost-of-living index &mdash; no feed, no keys, no model.</p>
+  </section>
+
+  <!-- HOMES -->
+  <section class="view" id="view-homes">
+    <div class="jobs-head">
+      <p class="eyebrow">Make yourself at home in</p>
+      <h2 class="script" id="homes-city">&nbsp;</h2>
+      <p class="jobs-sub" id="homes-sub"></p>
+    </div>
+    <div class="jobs-strip"><canvas id="homes-canvas" height="150"></canvas></div>
+    <div class="home-filters">
+      <div class="home-budget">
+        <input type="range" id="home-budget" min="0" max="10" step="1" value="10" aria-label="Monthly budget">
+        <span class="bval" id="home-bval"></span>
+      </div>
+      <div class="chips" id="home-types"></div>
+    </div>
+    <div class="job-list" id="home-list"></div>
+    <div class="portal-row" id="portal-row"></div>
+    <div class="jobs-nav">
+      <button class="ghost" id="homes-back">&larr; back to matches</button>
+      <button class="ghost" id="homes-jobs">see jobs here</button>
+    </div>
+    <p class="foot-note">Sample homes are illustrative &mdash; prices scaled from researched market rents. The links above search the real local market.</p>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="reveal" id="reveal">
+  <p class="eyebrow">The light points toward</p>
+  <h2 class="reveal-name" id="reveal-name">&nbsp;</h2>
+  <p class="reveal-sub" id="reveal-sub"></p>
+  <div class="reveal-canvas-wrap"><canvas id="reveal-canvas"></canvas></div>
+  <p class="reveal-hint">tap anywhere to continue</p>
+</div>
+
+<div class="modal-wrap" id="prof-modal">
+  <div class="modal">
+    <h3>Your Beacon book <span class="sync-chip" id="sync-chip">this device</span></h3>
+    <p id="prof-copy">Keep your lantern, your matches, and your saved homes under a name. Profiles are open to anyone this page is shared with &mdash; a lantern, not a lockbox.</p>
+    <div id="prof-body"></div>
+    <div class="prof-new">
+      <input id="prof-name" placeholder="a name for your search" maxlength="24" autocomplete="off" spellcheck="false">
+      <button class="btn2" id="prof-create">begin</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="prof-close">close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="how-modal">
+  <div class="modal">
+    <h3>How the light works</h3>
+    <p>No model, no black box, no keys &mdash; Beacon is a formula you could check by hand.</p>
+    <p>Your twenty-six answers become a profile across thirteen dimensions. Every city carries researched numbers &mdash; Numbeo rents, cost-of-living and safety indexes, Wikipedia sunshine hours, its actual languages. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
+    <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way (cheaper than your comfort is never penalized, pricier is only forgiven when it buys the quality you named); <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
+    <p>The weighted average is raised to a power to spread the field, and that is your percentage &mdash; same answers, same result, every time. Jobs, pay bands, and homes are seeded formulas over each city&rsquo;s industries, cost index, and market rent.</p>
+    <div class="row">
+      <button class="ghost" id="how-close">close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= data ================= */
+
+const FIELDS = [
+  {id:'tech',    label:'Tech & product'},
+  {id:'creative',label:'Design & creative'},
+  {id:'finance', label:'Finance'},
+  {id:'health',  label:'Healthcare'},
+  {id:'edu',     label:'Education'},
+  {id:'hosp',    label:'Hospitality & food'},
+  {id:'trades',  label:'Trades & making'},
+  {id:'remote',  label:'Remote / anywhere'},
+];
+
+/* dims 0–10 */
+const CITIES = [
+  {name:'Lisbon', country:'Portugal',
+   d:{pace:4,nature:6,culture:7,social:7,warmth:8,afford:5,food:8,transit:7,openness:8,scale:5,safe:6.7,div:7},
+   cost:4.6, langs:["portuguese"], eng:false,
+   ind:['tech','creative','hosp','remote'],
+   why:'Golden light, tiled hills, and a creative scene that runs on long lunches and Atlantic air.',
+   cos:['Miradouro Labs','Azulejo Studio','Tejo & Co','Atlântico Collective','Alfama House'],
+   f:{pop:'2.9M metro',lang:'Portuguese',rent:'$1,700',sun:'2806'}},
+  {name:'Austin', country:'United States',
+   d:{pace:6,nature:5,culture:6,social:7,warmth:8,afford:4,food:7,transit:3,openness:7,scale:6,safe:5.6,div:7},
+   cost:5.9, langs:["english"], eng:true,
+   ind:['tech','creative','trades'],
+   why:'Big-sky optimism, live music every night, and a tech scene that still wears boots.',
+   cos:['Violet Crown Systems','Barton Springs Co','Lone Star Works','Hill Country Collective','Mueller & Main'],
+   f:{pop:'2.4M metro',lang:'English',rent:'$1,939',sun:'2644'}},
+  {name:'Copenhagen', country:'Denmark',
+   d:{pace:4,nature:6,culture:8,social:5,warmth:3,afford:3,food:8,transit:9,openness:6,scale:5,safe:7.4,div:6},
+   cost:6.8, langs:["danish", "english"], eng:true,
+   ind:['creative','tech','health','edu'],
+   why:'Design in the bones of everything, harbor swims at lunch, candles against the dark.',
+   cos:['Nyhavn Digital','Hygge Collective','Studio Ø','Cykel Works','Kastellet Group'],
+   f:{pop:'2.1M metro',lang:'Danish · English everywhere',rent:'$1,988',sun:'1912'}},
+  {name:'Tokyo', country:'Japan',
+   d:{pace:9,nature:4,culture:9,social:6,warmth:6,afford:6,food:10,transit:10,openness:4,scale:10,safe:7.6,div:3},
+   cost:4.1, langs:["japanese"], eng:false,
+   ind:['tech','finance','creative'],
+   why:'A thousand tiny worlds stacked neatly together — endless depth for the endlessly curious.',
+   cos:['Shibuya Systems','Kanda Craft','Sumida Finance','Meguro Collective','Yanaka Atelier'],
+   f:{pop:'37M metro',lang:'Japanese',rent:'$1,252',sun:'1877'}},
+  {name:'Melbourne', country:'Australia',
+   d:{pace:5,nature:6,culture:8,social:7,warmth:6,afford:4,food:9,transit:7,openness:8,scale:7,safe:5.6,div:9},
+   cost:6.1, langs:["english"], eng:true,
+   ind:['creative','edu','health'],
+   why:'Laneway coffee culture, four seasons in a day, and an arts scene with real gravity.',
+   cos:['Fitzroy & Field','Yarra Digital','Brunswick Collective','Laneway Learning Co','Carlton Works'],
+   f:{pop:'5.2M metro',lang:'English',rent:'$1,715',sun:'2373'}},
+  {name:'Berlin', country:'Germany',
+   d:{pace:6,nature:5,culture:9,social:8,warmth:4,afford:4,food:7,transit:9,openness:8,scale:7,safe:5.5,div:8},
+   cost:5.5, langs:["english", "german"], eng:true,
+   ind:['tech','creative','remote'],
+   why:'Reinvention is the local sport — cheap studios, long nights, and room to become someone new.',
+   cos:['Spree Labs','Kreuzberg Kollektiv','Mitte Digital','Tempelhof Collective','Ostkreuz Works'],
+   f:{pop:'3.8M metro',lang:'German · English-friendly',rent:'$1,491',sun:'1626'}},
+  {name:'Vancouver', country:'Canada',
+   d:{pace:4,nature:9,culture:6,social:5,warmth:4,afford:4,food:8,transit:7,openness:8,scale:6,safe:5.7,div:9},
+   cost:5.8, langs:["english"], eng:true,
+   ind:['tech','creative','health'],
+   why:'Mountains at the end of every street, ocean at the other — the outdoors is the nightlife.',
+   cos:['Seawall Studios','Grouse Digital','Pacific Rim Collective','Cypress Works','Gastown & Co'],
+   f:{pop:'2.7M metro',lang:'English',rent:'$1,855',sun:'1938'}},
+  {name:'Mexico City', country:'Mexico',
+   d:{pace:7,nature:4,culture:9,social:8,warmth:7,afford:6,food:10,transit:6,openness:7,scale:10,safe:3.4,div:6},
+   cost:3.9, langs:["spanish"], eng:false,
+   ind:['creative','finance','hosp','remote'],
+   why:'Color, chaos, and generosity — a megacity that somehow still feels like a neighborhood.',
+   cos:['Roma Norte Labs','Condesa Creative','Chapultepec Capital','Coyoacán Collective','La Juárez Works'],
+   f:{pop:'22M metro',lang:'Spanish',rent:'$1,132',sun:'2555'}},
+  {name:'Amsterdam', country:'Netherlands',
+   d:{pace:5,nature:5,culture:8,social:7,warmth:4,afford:3,food:7,transit:10,openness:8,scale:5,safe:7.0,div:8},
+   cost:6.9, langs:["dutch", "english"], eng:true,
+   ind:['tech','finance','creative'],
+   why:'Everything within a bike ride, pragmatism with a painter&rsquo;s eye, canals that slow you down.',
+   cos:['Grachten Digital','De Pijp Studio','Amstel Capital','Jordaan Collective','Noord Works'],
+   f:{pop:'2.5M metro',lang:'Dutch · English everywhere',rent:'$2,662',sun:'1779'}},
+  {name:'Barcelona', country:'Spain',
+   d:{pace:5,nature:7,culture:8,social:8,warmth:8,afford:5,food:9,transit:8,openness:7,scale:7,safe:4.8,div:8},
+   cost:4.9, langs:["catalan", "spanish"], eng:false,
+   ind:['creative','hosp','tech','remote'],
+   why:'Beach mornings, Gaudí afternoons, dinners that start at ten — life lived outdoors.',
+   cos:['Gràcia Studio','Barceloneta Labs','Eixample & Co','Montjuïc Collective','El Born Works'],
+   f:{pop:'5.6M metro',lang:'Spanish & Catalan',rent:'$1,704',sun:'2591'}},
+  {name:'Seoul', country:'South Korea',
+   d:{pace:9,nature:5,culture:8,social:7,warmth:5,afford:6,food:9,transit:10,openness:5,scale:9,safe:7.5,div:3},
+   cost:4.5, langs:["korean"], eng:false,
+   ind:['tech','creative','finance'],
+   why:'Runs on ambition and neon — the fastest culture on earth, with mountains inside the city limits.',
+   cos:['Han River Labs','Hongdae Studio','Gangnam Capital','Bukhan Collective','Ikseon Works'],
+   f:{pop:'26M metro',lang:'Korean',rent:'$853',sun:'2066'}},
+  {name:'Denver', country:'United States',
+   d:{pace:5,nature:9,culture:5,social:6,warmth:5,afford:4,food:6,transit:4,openness:7,scale:6,safe:5.2,div:6},
+   cost:6.3, langs:["english"], eng:true,
+   ind:['tech','health','trades'],
+   why:'Three hundred days of sun and the Rockies on your doorstep — weekends are the whole point.',
+   cos:['Front Range Labs','Mile High Works','Platte & Pearl','Alpenglow Collective','RiNo Studio'],
+   f:{pop:'3.0M metro',lang:'English',rent:'$2,027',sun:'3107'}},
+  {name:'Montréal', country:'Canada',
+   d:{pace:5,nature:6,culture:8,social:7,warmth:3,afford:6,food:8,transit:8,openness:7,scale:6,safe:6.7,div:8},
+   cost:4.5, langs:["english", "french"], eng:true,
+   ind:['creative','tech','edu'],
+   why:'Two languages, festival summers, deep winters — bohemia that you can actually afford.',
+   cos:['Mile End Studio','Plateau Digital','Vieux-Port Works','Laurentides Collective','St-Viateur & Co'],
+   f:{pop:'4.3M metro',lang:'French & English',rent:'$1,294',sun:'2051'}},
+  {name:'Cape Town', country:'South Africa',
+   d:{pace:4,nature:10,culture:7,social:6,warmth:8,afford:7,food:8,transit:3,openness:7,scale:6,safe:2.6,div:7},
+   cost:3.3, langs:["afrikaans", "english", "xhosa"], eng:true,
+   ind:['creative','hosp','remote'],
+   why:'A mountain in the middle of the city and two oceans to choose from — staggering, every day.',
+   cos:['Table Bay Studio','Kloof Street Labs','Bo-Kaap & Co','Two Oceans Collective','Woodstock Works'],
+   f:{pop:'4.8M metro',lang:'English · Afrikaans · Xhosa',rent:'$1,085',sun:'3094'}},
+  {name:'Edinburgh', country:'Scotland',
+   d:{pace:4,nature:7,culture:8,social:6,warmth:3,afford:4,food:6,transit:7,openness:7,scale:4,safe:7.0,div:6},
+   cost:5.7, langs:["english"], eng:true,
+   ind:['finance','edu','creative'],
+   why:'Stone, mist, and stories — a compact, literary city with wild hills a bus ride away.',
+   cos:['Royal Mile Capital','Leith Studio','Arthur&rsquo;s Seat Works','Firth Collective','New Town Digital'],
+   f:{pop:'0.9M metro',lang:'English',rent:'$1,659',sun:'1428'}},
+  {name:'Medellín', country:'Colombia',
+   d:{pace:4,nature:8,culture:6,social:8,warmth:8,afford:7,food:7,transit:6,openness:8,scale:6,safe:4.6,div:5},
+   cost:3.0, langs:["spanish"], eng:false,
+   ind:['remote','tech','hosp'],
+   why:'The city of eternal spring — warm evenings, warmer people, and a remote-work scene in full bloom.',
+   cos:['Poblado Labs','Laureles Studio','Aburrá Works','Envigado Collective','Provenza & Co'],
+   f:{pop:'4.0M metro',lang:'Spanish',rent:'$978',sun:'1892'}},
+  {name:'Singapore', country:'Singapore',
+   d:{pace:8,nature:5,culture:7,social:5,warmth:9,afford:2,food:10,transit:10,openness:7,scale:8,safe:7.8,div:9},
+   cost:8.1, langs:["english", "malay", "mandarin", "tamil"], eng:true,
+   ind:['finance','tech','health'],
+   why:'A garden wired for ambition — hawker dinners, spotless order, all of Asia a short flight away.',
+   cos:['Marina Systems','Tiong Bahru Studio','Raffles Capital','Sentosa Collective','Katong Works'],
+   f:{pop:'6.0M',lang:'English · Mandarin · Malay · Tamil',rent:'$2,950',sun:'2022'}},
+  {name:'Portland', country:'United States',
+   d:{pace:3,nature:8,culture:7,social:5,warmth:4,afford:3,food:8,transit:6,openness:6,scale:5,safe:4.2,div:5},
+   cost:6.7, langs:["english"], eng:true,
+   ind:['creative','trades','tech'],
+   why:'Slow, green, and handmade — a city that takes its coffee, bikes, and weirdness seriously.',
+   cos:['Willamette Works','Hawthorne Studio','Cascadia Labs','Rose City Collective','Alberta & Co'],
+   f:{pop:'2.5M metro',lang:'English',rent:'$2,082',sun:'2341'}},
+  {name:'New York', country:'United States',
+   d:{pace:10,nature:3,culture:10,social:8,warmth:5,afford:0,food:10,transit:9,openness:9,scale:10,safe:4.9,div:10},
+   cost:10, langs:["english"], eng:true,
+   ind:['finance','tech','creative','health'],
+   why:'The city that assumes you have somewhere to be — everything, all of it, all at once.',
+   cos:['Bowery & Grand','Hudson Yards Labs','Greenpoint Studio','Canal Street Works','Fifth & Main Capital'],
+   f:{pop:'19.5M metro',lang:'English',rent:'$4,358',sun:'2535'}},
+  {name:'London', country:'United Kingdom',
+   d:{pace:8,nature:4,culture:10,social:7,warmth:3,afford:2,food:8,transit:9,openness:9,scale:10,safe:4.5,div:10},
+   cost:7.8, langs:["english"], eng:true,
+   ind:['finance','tech','creative','edu'],
+   why:'Two thousand years of layers, a village for every mood, and the world passing through daily.',
+   cos:['Shoreditch Digital','Marylebone & Co','Southbank Studio','Camden Works','Square Mile Capital'],
+   f:{pop:'14M metro',lang:'English',rent:'$3,044',sun:'1675'}},
+  {name:'Paris', country:'France',
+   d:{pace:7,nature:3,culture:10,social:7,warmth:5,afford:4,food:10,transit:9,openness:6,scale:9,safe:4.2,div:8},
+   cost:6.1, langs:["french"], eng:false,
+   ind:['creative','finance','edu','hosp'],
+   why:'Beauty as civic policy — long dinners, longer arguments, and the best walk home on earth.',
+   cos:['Le Marais Atelier','Rive Gauche Studio','Bastille Works','Opéra Capital','Belleville & Fils'],
+   f:{pop:'13M metro',lang:'French',rent:'$1,643',sun:'1662'}},
+  {name:'Vienna', country:'Austria',
+   d:{pace:4,nature:5,culture:9,social:5,warmth:4,afford:5,food:7,transit:10,openness:5,scale:7,safe:7.1,div:7},
+   cost:5.4, langs:["german"], eng:false,
+   ind:['edu','health','finance','creative'],
+   why:'Coffeehouse hours, concert halls, and a city that runs so smoothly you forget to worry.',
+   cos:['Ringstrasse Group','Naschmarkt Studio','Donau Digital','Leopoldstadt Works','Alsergrund & Co'],
+   f:{pop:'2.9M metro',lang:'German',rent:'$1,355',sun:'2048'}},
+  {name:'Prague', country:'Czechia',
+   d:{pace:5,nature:5,culture:9,social:7,warmth:4,afford:6,food:6,transit:9,openness:6,scale:6,safe:7.5,div:5},
+   cost:4.5, langs:["czech", "english"], eng:true,
+   ind:['tech','creative','edu'],
+   why:'A fairy tale with good wifi — spires, beer gardens, and a growing quiet tech scene.',
+   cos:['Vltava Labs','Žižkov Studio','Malá Strana Works','Karlín Digital','Letná & Co'],
+   f:{pop:'2.7M metro',lang:'Czech · English in center',rent:'$1,183',sun:'1668'}},
+  {name:'Athens', country:'Greece',
+   d:{pace:5,nature:6,culture:9,social:8,warmth:9,afford:6,food:9,transit:6,openness:7,scale:8,safe:4.5,div:5},
+   cost:3.9, langs:["greek"], eng:false,
+   ind:['hosp','creative','remote'],
+   why:'Ancient stones, new energy — rooftop evenings under the Acropolis and islands a ferry away.',
+   cos:['Plaka Studio','Exarchia Collective','Aegean Works','Kolonaki & Co','Psyrri Labs'],
+   f:{pop:'3.6M metro',lang:'Greek',rent:'$757',sun:'2773'}},
+  {name:'Valencia', country:'Spain',
+   d:{pace:3,nature:7,culture:7,social:8,warmth:9,afford:6,food:9,transit:8,openness:8,scale:6,safe:6.2,div:6},
+   cost:4.2, langs:["spanish"], eng:false,
+   ind:['remote','hosp','creative','tech'],
+   why:'Barcelona&rsquo;s unhurried cousin — paella by the sea, a river-turned-park, life at street level.',
+   cos:['Turia Studio','Ruzafa Labs','El Carmen Works','Malvarrosa & Co','Cabanyal Collective'],
+   f:{pop:'1.6M metro',lang:'Spanish',rent:'$1,489',sun:'2690'}},
+  {name:'Taipei', country:'Taiwan',
+   d:{pace:7,nature:7,culture:8,social:6,warmth:8,afford:6,food:10,transit:10,openness:6,scale:8,safe:8.3,div:3},
+   cost:3.8, langs:["mandarin"], eng:false,
+   ind:['tech','edu','health'],
+   why:'Night markets below, green mountains above, and the friendliest big city in Asia between them.',
+   cos:['Daan Digital','Ximen Studio','Songshan Works','Beitou & Co','Shida Labs'],
+   f:{pop:'7.0M metro',lang:'Mandarin',rent:'$865',sun:'1374'}},
+  {name:'Bangkok', country:'Thailand',
+   d:{pace:8,nature:4,culture:8,social:8,warmth:10,afford:7,food:10,transit:7,openness:8,scale:10,safe:6.2,div:6},
+   cost:3.2, langs:["english", "thai"], eng:true,
+   ind:['hosp','remote','finance'],
+   why:'A river city that never quite sleeps — street food as high art, temples between the towers.',
+   cos:['Sukhumvit Labs','Ari Studio','Chao Phraya Works','Thonglor & Co','Silom Capital'],
+   f:{pop:'15M metro',lang:'Thai · English common',rent:'$713',sun:'2624'}},
+  {name:'Chiang Mai', country:'Thailand',
+   d:{pace:2,nature:8,culture:7,social:6,warmth:9,afford:8,food:9,transit:4,openness:8,scale:3,safe:7.8,div:5},
+   cost:2.2, langs:["thai"], eng:false,
+   ind:['remote','hosp','creative'],
+   why:'Temple bells and mountain mist — the slow-morning capital of the remote-work world.',
+   cos:['Nimman Studio','Old City Works','Ping River Labs','Santitham & Co','Doi Collective'],
+   f:{pop:'1.2M metro',lang:'Thai',rent:'$476',sun:'2512'}},
+  {name:'Sydney', country:'Australia',
+   d:{pace:6,nature:8,culture:7,social:7,warmth:7,afford:3,food:8,transit:7,openness:8,scale:8,safe:6.6,div:9},
+   cost:6.9, langs:["english"], eng:true,
+   ind:['finance','tech','health'],
+   why:'Harbor light and surf before work — an outdoors city with a big-league career underneath.',
+   cos:['Harbour Digital','Surry Hills Studio','Bondi Works','Circular Quay Capital','Newtown & Co'],
+   f:{pop:'5.5M metro',lang:'English',rent:'$2,501',sun:'2628'}},
+  {name:'Auckland', country:'New Zealand',
+   d:{pace:4,nature:9,culture:6,social:6,warmth:6,afford:5,food:7,transit:5,openness:8,scale:5,safe:4.9,div:8},
+   cost:4.9, langs:["english", "m\u0101ori"], eng:true,
+   ind:['health','edu','trades'],
+   why:'Two harbors, fifty volcanoes, and a gentle pace — the edge of the world, comfortably.',
+   cos:['Ponsonby Studio','Waitematā Works','K Road Collective','Devonport & Co','Wynyard Labs'],
+   f:{pop:'1.7M metro',lang:'English & Māori',rent:'$1,322',sun:'2003'}},
+  {name:'Buenos Aires', country:'Argentina',
+   d:{pace:6,nature:3,culture:9,social:9,warmth:7,afford:6,food:8,transit:7,openness:7,scale:10,safe:3.7,div:7},
+   cost:3.7, langs:["spanish"], eng:false,
+   ind:['creative','remote','edu'],
+   why:'Midnight steak, morning café con leche, and a city that treats conversation as sport.',
+   cos:['Palermo Studio','San Telmo Works','Recoleta & Co','La Boca Collective','Retiro Capital'],
+   f:{pop:'15M metro',lang:'Spanish',rent:'$723',sun:'2525'}},
+  {name:'Toronto', country:'Canada',
+   d:{pace:7,nature:5,culture:8,social:7,warmth:3,afford:5,food:9,transit:7,openness:9,scale:9,safe:5.6,div:10},
+   cost:5.3, langs:["english"], eng:true,
+   ind:['finance','tech','health'],
+   why:'Half the world in one city — every cuisine, every language, and a lake that looks like a sea.',
+   cos:['Ossington Studio','Distillery Works','Bay Street Capital','Kensington Labs','Leslieville & Co'],
+   f:{pop:'6.5M metro',lang:'English',rent:'$1,653',sun:'2066'}},
+  {name:'Rio de Janeiro', country:'Brazil',
+   d:{pace:5,nature:9,culture:8,social:9,warmth:9,afford:7,food:8,transit:5,openness:7,scale:9,safe:2.5,div:6},
+   cost:2.6, langs:["portuguese"], eng:false,
+   ind:['hosp','creative','remote'],
+   why:'Mountains falling into the sea, music in the streets — a city built where it shouldn&rsquo;t fit.',
+   cos:['Ipanema Studio','Santa Teresa Works','Lapa Collective','Leblon & Co','Botafogo Labs'],
+   f:{pop:'13M metro',lang:'Portuguese',rent:'$832',sun:'2187'}},
+  {name:'Dubai', country:'United Arab Emirates',
+   d:{pace:8,nature:3,culture:6,social:6,warmth:10,afford:4,food:8,transit:7,openness:9,scale:8,safe:8.4,div:10},
+   cost:5.9, langs:["arabic", "english"], eng:true,
+   ind:['finance','tech','hosp'],
+   why:'A crossroads built at full speed — half the planet within an eight-hour flight.',
+   cos:['Marina Digital','Al Quoz Studio','DIFC Capital','Jumeirah Works','Deira & Co'],
+   f:{pop:'3.6M',lang:'Arabic · English everywhere',rent:'$2,476',sun:'3508'}},
+  {name:'Chicago', country:'United States',
+   d:{pace:7,nature:4,culture:9,social:7,warmth:3,afford:3,food:9,transit:8,openness:8,scale:9,safe:3.5,div:8},
+   cost:6.6, langs:["english"], eng:true,
+   ind:['finance','tech','creative'],
+   why:'Big-shouldered architecture, a lake like an ocean, winters that build character.',
+   cos:['Wicker Park Studio','Logan Square Works','The Loop Labs','Wicker Park Collective','Logan Square & Co'],
+   f:{pop:'9.5M metro',lang:'English',rent:'$2,413',sun:'2508'}},
+  {name:'Seattle', country:'United States',
+   d:{pace:5,nature:8,culture:7,social:5,warmth:3,afford:2,food:8,transit:7,openness:7,scale:7,safe:4.5,div:7},
+   cost:7.7, langs:["english"], eng:true,
+   ind:['tech','creative','health'],
+   why:'Evergreens, espresso, and software &mdash; rain as a creative medium.',
+   cos:['Ballard Studio','Capitol Hill Works','Fremont Labs','Ballard Collective','Capitol Hill & Co'],
+   f:{pop:'4.0M metro',lang:'English',rent:'$2,554',sun:'2170'}},
+  {name:'San Francisco', country:'United States',
+   d:{pace:7,nature:7,culture:8,social:6,warmth:5,afford:1,food:9,transit:7,openness:8,scale:7,safe:4.0,div:8},
+   cost:8.9, langs:["english"], eng:true,
+   ind:['tech','finance','creative'],
+   why:'Fog rolling over the hills and the future being typed beneath it.',
+   cos:['Mission Studio','Presidio Works','Noe Valley Labs','Mission Collective','Presidio & Co'],
+   f:{pop:'4.7M metro',lang:'English',rent:'$3,798',sun:'3062'}},
+  {name:'Los Angeles', country:'United States',
+   d:{pace:6,nature:7,culture:8,social:7,warmth:8,afford:2,food:9,transit:3,openness:8,scale:10,safe:4.6,div:9},
+   cost:7.6, langs:["english", "spanish"], eng:true,
+   ind:['creative','tech','hosp'],
+   why:'A hundred cities wearing one name, all of them golden at sunset.',
+   cos:['Silver Lake Studio','Venice Works','Echo Park Labs','Silver Lake Collective','Venice & Co'],
+   f:{pop:'13M metro',lang:'English & Spanish',rent:'$2,614',sun:'3254'}},
+  {name:'San Diego', country:'United States',
+   d:{pace:4,nature:8,culture:6,social:7,warmth:8,afford:2,food:8,transit:4,openness:8,scale:6,safe:6.0,div:7},
+   cost:7.9, langs:["english"], eng:true,
+   ind:['health','tech','trades'],
+   why:'Seventy-two degrees and the Pacific &mdash; ambition, but relaxed about it.',
+   cos:['North Park Studio','La Jolla Works','Ocean Beach Labs','North Park Collective','La Jolla & Co'],
+   f:{pop:'3.3M metro',lang:'English',rent:'$3,268',sun:'3055'}},
+  {name:'Boston', country:'United States',
+   d:{pace:7,nature:5,culture:9,social:6,warmth:3,afford:2,food:8,transit:8,openness:7,scale:7,safe:6.0,div:7},
+   cost:8.3, langs:["english"], eng:true,
+   ind:['edu','health','finance'],
+   why:'Brick, books, and stubborn brilliance packed around a harbor.',
+   cos:['Back Bay Studio','Cambridge Works','Jamaica Plain Labs','Back Bay Collective','Cambridge & Co'],
+   f:{pop:'4.9M metro',lang:'English',rent:'$3,401',sun:'2634'}},
+  {name:'Miami', country:'United States',
+   d:{pace:7,nature:6,culture:7,social:9,warmth:10,afford:2,food:8,transit:4,openness:9,scale:8,safe:4.7,div:9},
+   cost:7.7, langs:["english", "spanish"], eng:true,
+   ind:['finance','hosp','creative'],
+   why:'Latin America&rsquo;s glittering front porch &mdash; neon, salt air, deals by the pool.',
+   cos:['Wynwood Studio','Brickell Works','Little Havana Labs','Wynwood Collective','Brickell & Co'],
+   f:{pop:'6.1M metro',lang:'English & Spanish',rent:'$2,773',sun:'3154'}},
+  {name:'Nashville', country:'United States',
+   d:{pace:5,nature:5,culture:8,social:8,warmth:7,afford:4,food:7,transit:3,openness:8,scale:6,safe:5.5,div:5},
+   cost:6.2, langs:["english"], eng:true,
+   ind:['creative','health','hosp'],
+   why:'Songs get written before breakfast &mdash; a friendly boomtown in three-four time.',
+   cos:['East Nashville Studio','The Gulch Works','Germantown Labs','East Nashville Collective','The Gulch & Co'],
+   f:{pop:'2.0M metro',lang:'English',rent:'$1,953',sun:'2510'}},
+  {name:'New Orleans', country:'United States',
+   d:{pace:3,nature:4,culture:10,social:9,warmth:9,afford:4,food:9,transit:4,openness:7,scale:5,safe:3.2,div:6},
+   cost:6.0, langs:["english"], eng:true,
+   ind:['hosp','creative','edu'],
+   why:'Brass bands, shotgun houses, and dinners that last past midnight.',
+   cos:['Bywater Studio','Marigny Works','Garden District Labs','Bywater Collective','Marigny & Co'],
+   f:{pop:'1.3M metro',lang:'English',rent:'$1,853',sun:'2649'}},
+  {name:'Philadelphia', country:'United States',
+   d:{pace:6,nature:4,culture:8,social:7,warmth:4,afford:4,food:8,transit:7,openness:7,scale:8,safe:3.5,div:7},
+   cost:6.5, langs:["english"], eng:true,
+   ind:['health','edu','creative'],
+   why:'Underdog charm, world-class murals, and row houses full of history.',
+   cos:['Fishtown Studio','Rittenhouse Works','South Philly Labs','Fishtown Collective','Rittenhouse & Co'],
+   f:{pop:'6.2M metro',lang:'English',rent:'$1,971',sun:'2498'}},
+  {name:'Washington', country:'United States',
+   d:{pace:7,nature:5,culture:9,social:6,warmth:5,afford:2,food:8,transit:8,openness:7,scale:8,safe:4.0,div:8},
+   cost:8.1, langs:["english"], eng:true,
+   ind:['edu','finance','health'],
+   why:'Marble and cherry blossoms &mdash; a city that reads the footnotes.',
+   cos:['Adams Morgan Studio','Georgetown Works','Navy Yard Labs','Adams Morgan Collective','Georgetown & Co'],
+   f:{pop:'6.4M metro',lang:'English',rent:'$2,669',sun:'2528'}},
+  {name:'Minneapolis', country:'United States',
+   d:{pace:4,nature:7,culture:7,social:6,warmth:2,afford:4,food:7,transit:6,openness:7,scale:6,safe:4.4,div:6},
+   cost:5.9, langs:["english"], eng:true,
+   ind:['health','finance','creative'],
+   why:'Lakes in every direction, art everywhere, winters worn like a badge.',
+   cos:['Uptown Studio','Northeast Works','Mill District Labs','Uptown Collective','Northeast & Co'],
+   f:{pop:'3.7M metro',lang:'English',rent:'$1,817',sun:'2711'}},
+  {name:'Salt Lake City', country:'United States',
+   d:{pace:4,nature:9,culture:5,social:5,warmth:5,afford:5,food:6,transit:5,openness:6,scale:5,safe:6.4,div:4},
+   cost:5.3, langs:["english"], eng:true,
+   ind:['tech','health','trades'],
+   why:'Powder mornings and desk afternoons &mdash; the mountains run the calendar.',
+   cos:['Sugar House Studio','The Avenues Works','Liberty Wells Labs','Sugar House Collective','The Avenues & Co'],
+   f:{pop:'1.3M metro',lang:'English',rent:'$1,655',sun:'3029'}},
+  {name:'Phoenix', country:'United States',
+   d:{pace:5,nature:7,culture:5,social:6,warmth:10,afford:4,food:6,transit:3,openness:7,scale:8,safe:4.7,div:6},
+   cost:6.0, langs:["english"], eng:true,
+   ind:['tech','health','trades'],
+   why:'Saguaro sunsets and swimming-pool Decembers &mdash; the desert, air-conditioned.',
+   cos:['Roosevelt Row Studio','Arcadia Works','Tempe Labs','Roosevelt Row Collective','Arcadia & Co'],
+   f:{pop:'5.0M metro',lang:'English',rent:'$1,780',sun:'3872'}},
+  {name:'Boise', country:'United States',
+   d:{pace:3,nature:9,culture:5,social:6,warmth:5,afford:5,food:6,transit:4,openness:7,scale:4,safe:6.2,div:3},
+   cost:5.3, langs:["english"], eng:true,
+   ind:['tech','trades','health'],
+   why:'Foothills at the door, a river through town, nobody in a hurry.',
+   cos:['North End Studio','Hyde Park Works','Boise Bench Labs','North End Collective','Hyde Park & Co'],
+   f:{pop:'0.8M metro',lang:'English',rent:'$1,608',sun:'2993'}},
+  {name:'Asheville', country:'United States',
+   d:{pace:2,nature:9,culture:7,social:6,warmth:5,afford:4,food:8,transit:3,openness:7,scale:3,safe:6.5,div:4},
+   cost:5.5, langs:["english"], eng:true,
+   ind:['creative','hosp','trades'],
+   why:'Blue Ridge mornings, craft everything, banjos taken seriously.',
+   cos:['River Arts Studio','Montford Works','West Asheville Labs','River Arts Collective','Montford & Co'],
+   f:{pop:'0.5M metro',lang:'English',rent:'$1,700',sun:'2340'}},
+  {name:'Savannah', country:'United States',
+   d:{pace:3,nature:6,culture:8,social:7,warmth:8,afford:5,food:7,transit:4,openness:7,scale:3,safe:5.8,div:5},
+   cost:5.2, langs:["english"], eng:true,
+   ind:['creative','hosp','edu'],
+   why:'Spanish moss and slow afternoons &mdash; a city drawn in oak and shadow.',
+   cos:['Starland Studio','Victorian District Works','Thomas Square Labs','Starland Collective','Victorian District & Co'],
+   f:{pop:'0.4M metro',lang:'English',rent:'$1,600',sun:'2700'}},
+  {name:'Honolulu', country:'United States',
+   d:{pace:3,nature:9,culture:6,social:7,warmth:10,afford:1,food:8,transit:5,openness:7,scale:5,safe:5.3,div:8},
+   cost:8.6, langs:["english", "hawaiian"], eng:true,
+   ind:['hosp','health','remote'],
+   why:'Trade winds, volcanic ridges, and the ocean as a daily appointment.',
+   cos:['Kaimuki Studio','Kakaako Works','Manoa Labs','Kaimuki Collective','Kakaako & Co'],
+   f:{pop:'1.0M metro',lang:'English & Hawaiian',rent:'$2,913',sun:'3036'}},
+  {name:'Pittsburgh', country:'United States',
+   d:{pace:4,nature:6,culture:7,social:6,warmth:3,afford:5,food:7,transit:6,openness:7,scale:6,safe:6.1,div:5},
+   cost:5.2, langs:["english"], eng:true,
+   ind:['tech','health','edu'],
+   why:'Steel bones, robot labs, and a bridge to every neighborhood.',
+   cos:['Lawrenceville Studio','Shadyside Works','Strip District Labs','Lawrenceville Collective','Shadyside & Co'],
+   f:{pop:'2.4M metro',lang:'English',rent:'$1,570',sun:'2021'}},
+  {name:'Santa Fe', country:'United States',
+   d:{pace:2,nature:8,culture:9,social:5,warmth:6,afford:4,food:8,transit:3,openness:6,scale:2,safe:6.0,div:5},
+   cost:5.7, langs:["english", "spanish"], eng:true,
+   ind:['creative','hosp','health'],
+   why:'Adobe light and gallery dust &mdash; the high desert as a way of life.',
+   cos:['Canyon Road Studio','Railyard Works','The Plaza Labs','Canyon Road Collective','Railyard & Co'],
+   f:{pop:'0.2M metro',lang:'English & Spanish',rent:'$1,800',sun:'3200'}},
+  {name:'Calgary', country:'Canada',
+   d:{pace:5,nature:9,culture:5,social:6,warmth:2,afford:5,food:6,transit:5,openness:8,scale:6,safe:6.2,div:8},
+   cost:4.8, langs:["english"], eng:true,
+   ind:['finance','tech','trades'],
+   why:'Chinook winds, big sky, and the Rockies an hour west.',
+   cos:['Kensington Studio','Inglewood Works','Beltline Labs','Kensington Collective','Inglewood & Co'],
+   f:{pop:'1.6M metro',lang:'English',rent:'$1,291',sun:'2396'}},
+  {name:'Ottawa', country:'Canada',
+   d:{pace:4,nature:7,culture:7,social:5,warmth:2,afford:5,food:6,transit:6,openness:8,scale:6,safe:6.9,div:7},
+   cost:4.9, langs:["english", "french"], eng:true,
+   ind:['edu','tech','health'],
+   why:'A canal that freezes into a commute &mdash; tidy, bilingual, quietly happy.',
+   cos:['The Glebe Studio','Westboro Works','ByWard Labs','The Glebe Collective','Westboro & Co'],
+   f:{pop:'1.5M metro',lang:'English & French',rent:'$1,499',sun:'2084'}},
+  {name:'Halifax', country:'Canada',
+   d:{pace:3,nature:8,culture:6,social:7,warmth:3,afford:5,food:7,transit:5,openness:8,scale:4,safe:6.0,div:5},
+   cost:4.8, langs:["english"], eng:true,
+   ind:['edu','health','trades'],
+   why:'Fog horns and fiddle nights on the edge of the Atlantic.',
+   cos:['North End Studio','Hydrostone Works','The Waterfront Labs','North End Collective','Hydrostone & Co'],
+   f:{pop:'0.5M metro',lang:'English',rent:'$1,513',sun:'1962'}},
+  {name:'Québec City', country:'Canada',
+   d:{pace:3,nature:7,culture:9,social:6,warmth:2,afford:6,food:8,transit:7,openness:5,scale:4,safe:7.8,div:4},
+   cost:4.1, langs:["french"], eng:false,
+   ind:['edu','hosp','creative'],
+   why:'Four hundred years of stone, snow, and French spoken with joy.',
+   cos:['Petit Champlain Studio','Saint-Roch Works','Montcalm Labs','Petit Champlain Collective','Saint-Roch & Co'],
+   f:{pop:'0.8M metro',lang:'French',rent:'$1,024',sun:'1916'}},
+  {name:'Guadalajara', country:'Mexico',
+   d:{pace:5,nature:5,culture:8,social:8,warmth:8,afford:7,food:9,transit:5,openness:7,scale:8,safe:3.8,div:5},
+   cost:3.3, langs:["spanish"], eng:false,
+   ind:['tech','creative','hosp'],
+   why:'Mariachi at the root, startups in the branches &mdash; Mexico&rsquo;s easygoing second city.',
+   cos:['Chapultepec Studio','Americana Works','Tlaquepaque Labs','Chapultepec Collective','Americana & Co'],
+   f:{pop:'5.3M metro',lang:'Spanish',rent:'$931',sun:'2800'}},
+  {name:'Oaxaca', country:'Mexico',
+   d:{pace:2,nature:7,culture:10,social:7,warmth:8,afford:7,food:10,transit:4,openness:7,scale:3,safe:6.3,div:4},
+   cost:2.6, langs:["spanish"], eng:false,
+   ind:['creative','hosp','remote'],
+   why:'Mole, mezcal, and looms &mdash; craft as the city&rsquo;s heartbeat.',
+   cos:['Jalatlaco Studio','Xochimilco Works','Centro Labs','Jalatlaco Collective','Xochimilco & Co'],
+   f:{pop:'0.7M metro',lang:'Spanish',rent:'$550',sun:'2900'}},
+  {name:'Mérida', country:'Mexico',
+   d:{pace:3,nature:5,culture:8,social:7,warmth:10,afford:7,food:8,transit:4,openness:7,scale:4,safe:7.6,div:5},
+   cost:3.2, langs:["spanish"], eng:false,
+   ind:['remote','hosp','health'],
+   why:'Pastel mansions and cenote weekends in the Yucatán heat.',
+   cos:['Santiago Studio','Santa Ana Works','Paseo Montejo Labs','Santiago Collective','Santa Ana & Co'],
+   f:{pop:'1.2M metro',lang:'Spanish',rent:'$691',sun:'2600'}},
+  {name:'San José', country:'Costa Rica',
+   d:{pace:3,nature:9,culture:5,social:7,warmth:7,afford:6,food:7,transit:4,openness:8,scale:5,safe:4.4,div:6},
+   cost:4.3, langs:["spanish"], eng:false,
+   ind:['remote','health','edu'],
+   why:'Pura vida with cloud forests an hour away in any direction.',
+   cos:['Barrio Escalante Studio','La Sabana Works','Santa Ana Labs','Barrio Escalante Collective','La Sabana & Co'],
+   f:{pop:'2.2M metro',lang:'Spanish',rent:'$943',sun:'2000'}},
+  {name:'Panama City', country:'Panama',
+   d:{pace:6,nature:6,culture:5,social:7,warmth:10,afford:6,food:7,transit:5,openness:8,scale:7,safe:5.3,div:7},
+   cost:3.9, langs:["spanish"], eng:false,
+   ind:['finance','hosp','remote'],
+   why:'A skyline meeting rainforest where two oceans nearly touch.',
+   cos:['Casco Viejo Studio','San Francisco Works','El Cangrejo Labs','Casco Viejo Collective','San Francisco & Co'],
+   f:{pop:'1.9M metro',lang:'Spanish',rent:'$1,291',sun:'1744'}},
+  {name:'San Juan', country:'Puerto Rico',
+   d:{pace:4,nature:7,culture:8,social:8,warmth:10,afford:5,food:8,transit:4,openness:8,scale:5,safe:3.3,div:5},
+   cost:5.3, langs:["english", "spanish"], eng:true,
+   ind:['remote','hosp','creative'],
+   why:'Salsa in the streets and four centuries of candy-colored walls.',
+   cos:['Santurce Studio','Old San Juan Works','Condado Labs','Santurce Collective','Old San Juan & Co'],
+   f:{pop:'2.2M metro',lang:'Spanish & English',rent:'$1,813',sun:'2964'}},
+  {name:'Santo Domingo', country:'Dominican Republic',
+   d:{pace:5,nature:5,culture:8,social:8,warmth:10,afford:7,food:8,transit:4,openness:7,scale:7,safe:3.3,div:5},
+   cost:2.9, langs:["spanish"], eng:false,
+   ind:['hosp','remote','trades'],
+   why:'The New World&rsquo;s first city, still dancing after five centuries.',
+   cos:['Zona Colonial Studio','Piantini Works','Gazcue Labs','Zona Colonial Collective','Piantini & Co'],
+   f:{pop:'3.5M metro',lang:'Spanish',rent:'$736',sun:'2650'}},
+  {name:'Santiago', country:'Chile',
+   d:{pace:6,nature:8,culture:7,social:6,warmth:6,afford:7,food:8,transit:7,openness:6,scale:8,safe:3.6,div:6},
+   cost:3.0, langs:["spanish"], eng:false,
+   ind:['finance','tech','edu'],
+   why:'The Andes at the end of every avenue &mdash; wine country on weekends.',
+   cos:['Lastarria Studio','Providencia Works','Bellavista Labs','Lastarria Collective','Providencia & Co'],
+   f:{pop:'7.1M metro',lang:'Spanish',rent:'$570',sun:'2808'}},
+  {name:'Lima', country:'Peru',
+   d:{pace:6,nature:5,culture:8,social:7,warmth:6,afford:7,food:10,transit:4,openness:6,scale:9,safe:3.0,div:5},
+   cost:2.6, langs:["spanish"], eng:false,
+   ind:['hosp','finance','creative'],
+   why:'A grey-skied capital that cooks in full color &mdash; ceviche as religion.',
+   cos:['Barranco Studio','Miraflores Works','San Isidro Labs','Barranco Collective','Miraflores & Co'],
+   f:{pop:'11M metro',lang:'Spanish',rent:'$753',sun:'1230'}},
+  {name:'Bogotá', country:'Colombia',
+   d:{pace:6,nature:6,culture:8,social:7,warmth:3,afford:7,food:8,transit:6,openness:6,scale:9,safe:3.3,div:5},
+   cost:2.8, langs:["spanish"], eng:false,
+   ind:['creative','tech','edu'],
+   why:'High-altitude hustle &mdash; museums, mountains, and Sunday ciclovía.',
+   cos:['Chapinero Studio','La Candelaria Works','Usaquén Labs','Chapinero Collective','La Candelaria & Co'],
+   f:{pop:'11M metro',lang:'Spanish',rent:'$739',sun:'1328'}},
+  {name:'Montevideo', country:'Uruguay',
+   d:{pace:3,nature:5,culture:7,social:7,warmth:6,afford:6,food:7,transit:6,openness:8,scale:5,safe:4.3,div:5},
+   cost:3.9, langs:["spanish"], eng:false,
+   ind:['remote','edu','creative'],
+   why:'Mate on the rambla and nowhere urgent to be.',
+   cos:['Ciudad Vieja Studio','Pocitos Works','Cordón Labs','Ciudad Vieja Collective','Pocitos & Co'],
+   f:{pop:'1.8M metro',lang:'Spanish',rent:'$744',sun:'2481'}},
+  {name:'São Paulo', country:'Brazil',
+   d:{pace:9,nature:3,culture:9,social:8,warmth:7,afford:7,food:10,transit:7,openness:7,scale:10,safe:3.0,div:8},
+   cost:3.0, langs:["portuguese"], eng:false,
+   ind:['finance','tech','creative'],
+   why:'Brazil&rsquo;s engine room &mdash; endless food, art, and motion.',
+   cos:['Vila Madalena Studio','Pinheiros Works','Jardins Labs','Vila Madalena Collective','Pinheiros & Co'],
+   f:{pop:'22M metro',lang:'Portuguese',rent:'$668',sun:'1894'}},
+  {name:'Florianópolis', country:'Brazil',
+   d:{pace:3,nature:9,culture:5,social:7,warmth:7,afford:7,food:7,transit:4,openness:8,scale:4,safe:5.5,div:4},
+   cost:2.7, langs:["portuguese"], eng:false,
+   ind:['remote','tech','hosp'],
+   why:'Forty-two beaches and a startup scene in board shorts.',
+   cos:['Lagoa Studio','Campeche Works','Santo Antônio Labs','Lagoa Collective','Campeche & Co'],
+   f:{pop:'1.2M metro',lang:'Portuguese',rent:'$651',sun:'2000'}},
+  {name:'Cartagena', country:'Colombia',
+   d:{pace:4,nature:6,culture:8,social:8,warmth:10,afford:7,food:8,transit:4,openness:7,scale:5,safe:4.2,div:4},
+   cost:2.8, langs:["spanish"], eng:false,
+   ind:['hosp','remote','creative'],
+   why:'Caribbean heat inside coral-stone walls &mdash; color turned all the way up.',
+   cos:['Getsemaní Studio','Walled City Works','Manga Labs','Getsemaní Collective','Walled City & Co'],
+   f:{pop:'1.0M metro',lang:'Spanish',rent:'$600',sun:'2600'}},
+  {name:'Córdoba', country:'Argentina',
+   d:{pace:4,nature:6,culture:7,social:8,warmth:7,afford:7,food:7,transit:6,openness:7,scale:6,safe:4.0,div:4},
+   cost:3.2, langs:["spanish"], eng:false,
+   ind:['edu','tech','creative'],
+   why:'Student energy under sierra skies &mdash; fernet and long debates.',
+   cos:['Güemes Studio','Nueva Córdoba Works','Alta Córdoba Labs','Güemes Collective','Nueva Córdoba & Co'],
+   f:{pop:'1.6M metro',lang:'Spanish',rent:'$485',sun:'2534'}},
+  {name:'Porto', country:'Portugal',
+   d:{pace:3,nature:6,culture:8,social:6,warmth:6,afford:6,food:8,transit:7,openness:7,scale:4,safe:6.6,div:6},
+   cost:4.1, langs:["portuguese"], eng:false,
+   ind:['creative','tech','hosp'],
+   why:'Granite hills, port-wine cellars, and the Atlantic setting the mood.',
+   cos:['Ribeira Studio','Cedofeita Works','Foz Labs','Ribeira Collective','Cedofeita & Co'],
+   f:{pop:'1.7M metro',lang:'Portuguese',rent:'$1,333',sun:'2468'}},
+  {name:'Madrid', country:'Spain',
+   d:{pace:7,nature:4,culture:10,social:9,warmth:7,afford:5,food:9,transit:9,openness:8,scale:9,safe:7.1,div:7},
+   cost:4.8, langs:["spanish"], eng:false,
+   ind:['finance','creative','edu'],
+   why:'Nights that outlast the streetlights &mdash; art, jamón, and open arms.',
+   cos:['Malasaña Studio','Lavapiés Works','Chamberí Labs','Malasaña Collective','Lavapiés & Co'],
+   f:{pop:'6.8M metro',lang:'Spanish',rent:'$1,589',sun:'2769'}},
+  {name:'Seville', country:'Spain',
+   d:{pace:3,nature:4,culture:9,social:9,warmth:9,afford:6,food:9,transit:6,openness:7,scale:5,safe:6.3,div:5},
+   cost:3.5, langs:["spanish"], eng:false,
+   ind:['hosp','creative','edu'],
+   why:'Orange blossoms and flamenco &mdash; heat with a heartbeat.',
+   cos:['Triana Studio','Santa Cruz Works','Alameda Labs','Triana Collective','Santa Cruz & Co'],
+   f:{pop:'1.5M metro',lang:'Spanish',rent:'$950',sun:'2918'}},
+  {name:'Granada', country:'Spain',
+   d:{pace:2,nature:7,culture:9,social:7,warmth:7,afford:7,food:8,transit:5,openness:6,scale:3,safe:6.8,div:5},
+   cost:3.4, langs:["spanish"], eng:false,
+   ind:['edu','creative','hosp'],
+   why:'The Alhambra above, free tapas below, the Sierra behind.',
+   cos:['Albaicín Studio','Realejo Works','Sacromonte Labs','Albaicín Collective','Realejo & Co'],
+   f:{pop:'0.5M metro',lang:'Spanish',rent:'$886',sun:'2881'}},
+  {name:'Bilbao', country:'Spain',
+   d:{pace:4,nature:7,culture:8,social:6,warmth:5,afford:6,food:9,transit:7,openness:6,scale:4,safe:5.1,div:5},
+   cost:4.4, langs:["basque", "spanish"], eng:false,
+   ind:['creative','trades','tech'],
+   why:'Titanium curves over an old iron river &mdash; pintxos as fine art.',
+   cos:['Casco Viejo Studio','Abando Works','Deusto Labs','Casco Viejo Collective','Abando & Co'],
+   f:{pop:'1.0M metro',lang:'Spanish & Basque',rent:'$1,314',sun:'1584'}},
+  {name:'Palma', country:'Spain',
+   d:{pace:3,nature:7,culture:7,social:7,warmth:9,afford:5,food:8,transit:6,openness:7,scale:4,safe:6.4,div:7},
+   cost:4.7, langs:["catalan", "spanish"], eng:false,
+   ind:['hosp','remote','creative'],
+   why:'A honey-stone old town with the Mediterranean at the end of the lane.',
+   cos:['Santa Catalina Studio','La Lonja Works','Portixol Labs','Santa Catalina Collective','La Lonja & Co'],
+   f:{pop:'0.6M metro',lang:'Spanish & Catalan',rent:'$1,559',sun:'2779'}},
+  {name:'Marseille', country:'France',
+   d:{pace:5,nature:7,culture:8,social:8,warmth:9,afford:5,food:9,transit:6,openness:6,scale:7,safe:3.3,div:8},
+   cost:5.0, langs:["french"], eng:false,
+   ind:['hosp','creative','trades'],
+   why:'Rowdy, sunlit, and salt-stained &mdash; France with the collar open.',
+   cos:['Le Panier Studio','Vieux-Port Works','Cours Julien Labs','Le Panier Collective','Vieux-Port & Co'],
+   f:{pop:'1.9M metro',lang:'French',rent:'$939',sun:'2836'}},
+  {name:'Lyon', country:'France',
+   d:{pace:5,nature:5,culture:8,social:6,warmth:5,afford:5,food:10,transit:8,openness:6,scale:6,safe:4.1,div:6},
+   cost:4.9, langs:["french"], eng:false,
+   ind:['finance','tech','hosp'],
+   why:'Two rivers, secret passages, and France&rsquo;s most serious kitchens.',
+   cos:['Croix-Rousse Studio','Vieux Lyon Works','Confluence Labs','Croix-Rousse Collective','Vieux Lyon & Co'],
+   f:{pop:'2.3M metro',lang:'French',rent:'$916',sun:'2002'}},
+  {name:'Bordeaux', country:'France',
+   d:{pace:4,nature:6,culture:8,social:6,warmth:6,afford:5,food:9,transit:7,openness:6,scale:5,safe:5.0,div:5},
+   cost:4.8, langs:["french"], eng:false,
+   ind:['hosp','tech','creative'],
+   why:'A wine capital with tram-quiet streets and ocean surf an hour west.',
+   cos:['Chartrons Studio','Saint-Pierre Works','Bastide Labs','Chartrons Collective','Saint-Pierre & Co'],
+   f:{pop:'1.3M metro',lang:'French',rent:'$917',sun:'2035'}},
+  {name:'Nice', country:'France',
+   d:{pace:4,nature:7,culture:7,social:7,warmth:9,afford:5,food:8,transit:6,openness:7,scale:5,safe:4.5,div:6},
+   cost:5.3, langs:["french"], eng:false,
+   ind:['hosp','remote','creative'],
+   why:'Azure water, pastel facades, and markets that smell of lemons.',
+   cos:['Vieux Nice Studio','Libération Works','Cimiez Labs','Vieux Nice Collective','Libération & Co'],
+   f:{pop:'1.0M metro',lang:'French',rent:'$1,161',sun:'2761'}},
+  {name:'Brussels', country:'Belgium',
+   d:{pace:5,nature:4,culture:8,social:6,warmth:3,afford:5,food:8,transit:8,openness:8,scale:7,safe:4.4,div:8},
+   cost:5.4, langs:["dutch", "french"], eng:false,
+   ind:['finance','edu','creative'],
+   why:'Surreal, multilingual, and better fed than it lets on.',
+   cos:['Ixelles Studio','Saint-Gilles Works','Sablon Labs','Ixelles Collective','Saint-Gilles & Co'],
+   f:{pop:'2.1M metro',lang:'French & Dutch',rent:'$1,405',sun:'1546'}},
+  {name:'Antwerp', country:'Belgium',
+   d:{pace:4,nature:4,culture:8,social:6,warmth:3,afford:5,food:8,transit:8,openness:7,scale:5,safe:6.0,div:7},
+   cost:4.9, langs:["dutch"], eng:false,
+   ind:['creative','finance','trades'],
+   why:'Diamonds, fashion, and a port city&rsquo;s quiet swagger.',
+   cos:['Zuid Studio','Eilandje Works','Zurenborg Labs','Zuid Collective','Eilandje & Co'],
+   f:{pop:'1.2M metro',lang:'Dutch',rent:'$1,075',sun:'1600'}},
+  {name:'Rotterdam', country:'Netherlands',
+   d:{pace:5,nature:4,culture:7,social:6,warmth:3,afford:4,food:7,transit:9,openness:8,scale:6,safe:7.0,div:8},
+   cost:6.1, langs:["dutch"], eng:false,
+   ind:['trades','creative','tech'],
+   why:'Bombed flat, rebuilt bold &mdash; architecture as civic sport.',
+   cos:['Witte de With Studio','Katendrecht Works','Kralingen Labs','Witte de With Collective','Katendrecht & Co'],
+   f:{pop:'1.8M metro',lang:'Dutch',rent:'$1,900',sun:'1700'}},
+  {name:'Utrecht', country:'Netherlands',
+   d:{pace:4,nature:5,culture:7,social:6,warmth:3,afford:4,food:7,transit:10,openness:7,scale:4,safe:7.3,div:6},
+   cost:6.1, langs:["dutch"], eng:false,
+   ind:['edu','tech','creative'],
+   why:'Amsterdam&rsquo;s calmer sibling &mdash; wharf cellars and student bikes.',
+   cos:['Wittevrouwen Studio','Lombok Works','Oudegracht Labs','Wittevrouwen Collective','Lombok & Co'],
+   f:{pop:'1.4M metro',lang:'Dutch',rent:'$1,960',sun:'1660'}},
+  {name:'Hamburg', country:'Germany',
+   d:{pace:5,nature:5,culture:8,social:5,warmth:3,afford:5,food:8,transit:9,openness:7,scale:7,safe:5.9,div:7},
+   cost:5.2, langs:["german"], eng:false,
+   ind:['trades','creative','finance'],
+   why:'Harbor wind, red brick, and a port that thinks in continents.',
+   cos:['Sternschanze Studio','St. Pauli Works','Ottensen Labs','Sternschanze Collective','St. Pauli & Co'],
+   f:{pop:'5.1M metro',lang:'German',rent:'$1,364',sun:'1557'}},
+  {name:'Munich', country:'Germany',
+   d:{pace:5,nature:7,culture:8,social:6,warmth:4,afford:4,food:8,transit:9,openness:6,scale:7,safe:7.8,div:7},
+   cost:6.1, langs:["german"], eng:false,
+   ind:['tech','finance','edu'],
+   why:'Beer gardens, alpine weekends, and engineering done properly.',
+   cos:['Glockenbach Studio','Schwabing Works','Haidhausen Labs','Glockenbach Collective','Schwabing & Co'],
+   f:{pop:'6.2M metro',lang:'German',rent:'$1,774',sun:'1777'}},
+  {name:'Cologne', country:'Germany',
+   d:{pace:5,nature:4,culture:7,social:8,warmth:4,afford:5,food:7,transit:8,openness:7,scale:6,safe:5.5,div:7},
+   cost:5.2, langs:["german"], eng:false,
+   ind:['creative','tech','edu'],
+   why:'Carnival in the blood &mdash; Germany&rsquo;s friendliest big city.',
+   cos:['Ehrenfeld Studio','Belgisches Viertel Works','Südstadt Labs','Ehrenfeld Collective','Belgisches Viertel & Co'],
+   f:{pop:'3.6M metro',lang:'German',rent:'$1,211',sun:'1504'}},
+  {name:'Leipzig', country:'Germany',
+   d:{pace:4,nature:5,culture:8,social:7,warmth:4,afford:6,food:6,transit:8,openness:8,scale:5,safe:5.8,div:5},
+   cost:4.5, langs:["german"], eng:false,
+   ind:['creative','edu','tech'],
+   why:'Bach&rsquo;s city, now full of studios in old cotton mills.',
+   cos:['Plagwitz Studio','Südvorstadt Works','Connewitz Labs','Plagwitz Collective','Südvorstadt & Co'],
+   f:{pop:'1.5M metro',lang:'German',rent:'$815',sun:'1653'}},
+  {name:'Zurich', country:'Switzerland',
+   d:{pace:5,nature:8,culture:7,social:4,warmth:4,afford:0,food:8,transit:10,openness:6,scale:6,safe:7.6,div:8},
+   cost:10, langs:["german"], eng:false,
+   ind:['finance','tech','health'],
+   why:'Lake-swim lunches and watchwork precision &mdash; quality as habit.',
+   cos:['Kreis 4 Studio','Seefeld Works','Wipkingen Labs','Kreis 4 Collective','Seefeld & Co'],
+   f:{pop:'1.6M metro',lang:'German',rent:'$3,106',sun:'1566'}},
+  {name:'Geneva', country:'Switzerland',
+   d:{pace:5,nature:8,culture:6,social:4,warmth:4,afford:1,food:7,transit:9,openness:7,scale:5,safe:7.0,div:9},
+   cost:9.0, langs:["french"], eng:false,
+   ind:['finance','health','edu'],
+   why:'Diplomats, watchmakers, and the Alps across the water.',
+   cos:['Carouge Studio','Eaux-Vives Works','Plainpalais Labs','Carouge Collective','Eaux-Vives & Co'],
+   f:{pop:'1.0M metro',lang:'French',rent:'$2,853',sun:'1828'}},
+  {name:'Milan', country:'Italy',
+   d:{pace:7,nature:4,culture:9,social:6,warmth:5,afford:4,food:9,transit:9,openness:6,scale:8,safe:4.6,div:7},
+   cost:5.9, langs:["italian"], eng:false,
+   ind:['creative','finance','tech'],
+   why:'Aperitivo hour in the world&rsquo;s best-dressed city.',
+   cos:['Brera Studio','Navigli Works','Isola Labs','Brera Collective','Navigli & Co'],
+   f:{pop:'4.3M metro',lang:'Italian',rent:'$1,787',sun:'1915'}},
+  {name:'Rome', country:'Italy',
+   d:{pace:5,nature:5,culture:10,social:7,warmth:7,afford:5,food:9,transit:6,openness:6,scale:9,safe:5.3,div:6},
+   cost:4.7, langs:["italian"], eng:false,
+   ind:['creative','edu','hosp'],
+   why:'Every corner an argument between centuries &mdash; carbonara settles it.',
+   cos:['Trastevere Studio','Monti Works','Testaccio Labs','Trastevere Collective','Monti & Co'],
+   f:{pop:'4.3M metro',lang:'Italian',rent:'$1,253',sun:'2473'}},
+  {name:'Florence', country:'Italy',
+   d:{pace:3,nature:5,culture:10,social:6,warmth:6,afford:5,food:9,transit:6,openness:6,scale:4,safe:5.8,div:5},
+   cost:5.4, langs:["italian"], eng:false,
+   ind:['creative','edu','hosp'],
+   why:'The Renaissance never quite left &mdash; art within arm&rsquo;s reach.',
+   cos:['Oltrarno Studio','Santo Spirito Works','San Niccolò Labs','Oltrarno Collective','Santo Spirito & Co'],
+   f:{pop:'1.0M metro',lang:'Italian',rent:'$1,525',sun:'2268'}},
+  {name:'Naples', country:'Italy',
+   d:{pace:6,nature:6,culture:9,social:9,warmth:8,afford:6,food:10,transit:5,openness:6,scale:8,safe:3.8,div:4},
+   cost:4.3, langs:["italian"], eng:false,
+   ind:['hosp','creative','trades'],
+   why:'Chaos with perfect pizza &mdash; Vesuvius keeps things honest.',
+   cos:['Spaccanapoli Studio','Vomero Works','Chiaia Labs','Spaccanapoli Collective','Vomero & Co'],
+   f:{pop:'3.1M metro',lang:'Italian',rent:'$1,047',sun:'2375'}},
+  {name:'Bologna', country:'Italy',
+   d:{pace:4,nature:4,culture:9,social:8,warmth:5,afford:5,food:10,transit:7,openness:7,scale:5,safe:5.1,div:6},
+   cost:4.9, langs:["italian"], eng:false,
+   ind:['edu','creative','tech'],
+   why:'Porticoes, professors, and the best ragù on earth.',
+   cos:['Quadrilatero Studio','Pratello Works','Bolognina Labs','Quadrilatero Collective','Pratello & Co'],
+   f:{pop:'1.0M metro',lang:'Italian',rent:'$1,185',sun:'2079'}},
+  {name:'Turin', country:'Italy',
+   d:{pace:4,nature:6,culture:8,social:6,warmth:5,afford:6,food:9,transit:7,openness:6,scale:6,safe:4.8,div:6},
+   cost:4.3, langs:["italian"], eng:false,
+   ind:['tech','creative','trades'],
+   why:'Elegant grids, chocolate, and the Alps filling the avenues.',
+   cos:['San Salvario Studio','Vanchiglia Works','Crocetta Labs','San Salvario Collective','Vanchiglia & Co'],
+   f:{pop:'1.7M metro',lang:'Italian',rent:'$901',sun:'2077'}},
+  {name:'Palermo', country:'Italy',
+   d:{pace:4,nature:6,culture:9,social:8,warmth:9,afford:6,food:10,transit:4,openness:6,scale:6,safe:5.4,div:4},
+   cost:3.7, langs:["italian"], eng:false,
+   ind:['hosp','creative','trades'],
+   why:'Markets that shout, palazzi that whisper &mdash; Sicily at full volume.',
+   cos:['Kalsa Studio','Vucciria Works','Ballarò Labs','Kalsa Collective','Vucciria & Co'],
+   f:{pop:'1.2M metro',lang:'Italian',rent:'$769',sun:'2530'}},
+  {name:'Stockholm', country:'Sweden',
+   d:{pace:5,nature:7,culture:8,social:4,warmth:2,afford:4,food:8,transit:9,openness:6,scale:6,safe:5.4,div:7},
+   cost:6.0, langs:["swedish"], eng:false,
+   ind:['tech','creative','finance'],
+   why:'An archipelago of islands, design, and disciplined cool.',
+   cos:['Södermalm Studio','Vasastan Works','Östermalm Labs','Södermalm Collective','Vasastan & Co'],
+   f:{pop:'2.4M metro',lang:'Swedish',rent:'$1,809',sun:'1803'}},
+  {name:'Gothenburg', country:'Sweden',
+   d:{pace:4,nature:7,culture:7,social:5,warmth:2,afford:5,food:8,transit:8,openness:7,scale:5,safe:5.4,div:6},
+   cost:4.6, langs:["swedish"], eng:false,
+   ind:['trades','tech','creative'],
+   why:'Fika, sea fog, and a west-coast warmth Sweden keeps quiet about.',
+   cos:['Haga Studio','Majorna Works','Linné Labs','Haga Collective','Majorna & Co'],
+   f:{pop:'1.1M metro',lang:'Swedish',rent:'$1,100',sun:'1721'}},
+  {name:'Oslo', country:'Norway',
+   d:{pace:5,nature:9,culture:7,social:4,warmth:2,afford:3,food:7,transit:8,openness:6,scale:5,safe:6.6,div:6},
+   cost:6.8, langs:["norwegian"], eng:false,
+   ind:['finance','tech','health'],
+   why:'Fjord in front, forest behind &mdash; nature on the metro line.',
+   cos:['Grünerløkka Studio','Frogner Works','Tøyen Labs','Grünerløkka Collective','Frogner & Co'],
+   f:{pop:'1.5M metro',lang:'Norwegian',rent:'$2,063',sun:'1668'}},
+  {name:'Bergen', country:'Norway',
+   d:{pace:3,nature:10,culture:6,social:5,warmth:2,afford:4,food:7,transit:7,openness:6,scale:3,safe:7.5,div:4},
+   cost:6.2, langs:["norwegian"], eng:false,
+   ind:['trades','hosp','edu'],
+   why:'Seven mountains, constant drizzle, and postcard wharf houses.',
+   cos:['Bryggen Studio','Sandviken Works','Møhlenpris Labs','Bryggen Collective','Sandviken & Co'],
+   f:{pop:'0.4M metro',lang:'Norwegian',rent:'$1,548',sun:'1613'}},
+  {name:'Helsinki', country:'Finland',
+   d:{pace:4,nature:7,culture:7,social:4,warmth:2,afford:5,food:7,transit:9,openness:6,scale:5,safe:7.5,div:5},
+   cost:5.4, langs:["finnish", "swedish"], eng:false,
+   ind:['tech','edu','creative'],
+   why:'Sauna, sea ice, and design that earns its silence.',
+   cos:['Kallio Studio','Punavuori Works','Töölö Labs','Kallio Collective','Punavuori & Co'],
+   f:{pop:'1.5M metro',lang:'Finnish & Swedish',rent:'$1,280',sun:'1858'}},
+  {name:'Reykjavik', country:'Iceland',
+   d:{pace:3,nature:10,culture:7,social:6,warmth:1,afford:2,food:7,transit:5,openness:7,scale:2,safe:7.5,div:4},
+   cost:7.6, langs:["icelandic"], eng:false,
+   ind:['remote','creative','hosp'],
+   why:'Lava fields and midnight sun &mdash; a village-sized capital of stories.',
+   cos:['Vesturbær Studio','Laugardalur Works','Grandi Labs','Vesturbær Collective','Laugardalur & Co'],
+   f:{pop:'0.25M metro',lang:'Icelandic',rent:'$2,507',sun:'1326'}},
+  {name:'Dublin', country:'Ireland',
+   d:{pace:5,nature:5,culture:8,social:8,warmth:3,afford:3,food:7,transit:6,openness:9,scale:6,safe:4.6,div:7},
+   cost:6.8, langs:["english"], eng:true,
+   ind:['tech','finance','edu'],
+   why:'Craic is infrastructure &mdash; literature in the pubs, tech on the quays.',
+   cos:['Portobello Studio','Stoneybatter Works','Ranelagh Labs','Portobello Collective','Stoneybatter & Co'],
+   f:{pop:'1.5M metro',lang:'English',rent:'$2,508',sun:'1453'}},
+  {name:'Glasgow', country:'Scotland',
+   d:{pace:5,nature:6,culture:8,social:8,warmth:2,afford:5,food:7,transit:7,openness:8,scale:6,safe:5.5,div:6},
+   cost:5.2, langs:["english"], eng:true,
+   ind:['creative','edu','health'],
+   why:'Victorian grandeur with a wicked grin &mdash; the friendliest banter in Britain.',
+   cos:['West End Studio','Finnieston Works','Dennistoun Labs','West End Collective','Finnieston & Co'],
+   f:{pop:'1.9M metro',lang:'English',rent:'$1,351',sun:'1281'}},
+  {name:'Manchester', country:'United Kingdom',
+   d:{pace:6,nature:5,culture:8,social:8,warmth:3,afford:5,food:7,transit:7,openness:8,scale:7,safe:4.4,div:7},
+   cost:5.4, langs:["english"], eng:true,
+   ind:['tech','creative','edu'],
+   why:'Music city of the north &mdash; rain-soaked and self-assured.',
+   cos:['Northern Quarter Studio','Ancoats Works','Chorlton Labs','Northern Quarter Collective','Ancoats & Co'],
+   f:{pop:'2.9M metro',lang:'English',rent:'$1,876',sun:'1416'}},
+  {name:'Bristol', country:'United Kingdom',
+   d:{pace:5,nature:6,culture:8,social:7,warmth:3,afford:4,food:8,transit:6,openness:7,scale:5,safe:5.7,div:6},
+   cost:5.7, langs:["english"], eng:true,
+   ind:['creative','tech','trades'],
+   why:'Street art, harbourside cider, and gentle west-country anarchy.',
+   cos:['Stokes Croft Studio','Clifton Works','Southville Labs','Stokes Croft Collective','Clifton & Co'],
+   f:{pop:'0.7M metro',lang:'English',rent:'$2,007',sun:'1587'}},
+  {name:'Brighton', country:'United Kingdom',
+   d:{pace:4,nature:6,culture:7,social:8,warmth:3,afford:4,food:7,transit:6,openness:8,scale:4,safe:6.0,div:6},
+   cost:5.9, langs:["english"], eng:true,
+   ind:['creative','remote','tech'],
+   why:'A seaside town that ran away to join the circus.',
+   cos:['North Laine Studio','Kemptown Works','Hove Labs','North Laine Collective','Kemptown & Co'],
+   f:{pop:'0.6M metro',lang:'English',rent:'$1,929',sun:'1750'}},
+  {name:'Warsaw', country:'Poland',
+   d:{pace:7,nature:4,culture:7,social:6,warmth:3,afford:6,food:7,transit:8,openness:7,scale:8,safe:7.5,div:4},
+   cost:4.2, langs:["polish"], eng:false,
+   ind:['finance','tech','edu'],
+   why:'Rebuilt from memory, running on ambition.',
+   cos:['Praga Studio','Mokotów Works','Powiśle Labs','Praga Collective','Mokotów & Co'],
+   f:{pop:'3.1M metro',lang:'Polish',rent:'$1,271',sun:'1997'}},
+  {name:'Kraków', country:'Poland',
+   d:{pace:4,nature:5,culture:9,social:7,warmth:3,afford:6,food:8,transit:7,openness:7,scale:5,safe:7.5,div:4},
+   cost:3.7, langs:["polish"], eng:false,
+   ind:['tech','edu','creative'],
+   why:'Legends in the cellars, students in the squares.',
+   cos:['Kazimierz Studio','Podgórze Works','Old Town Labs','Kazimierz Collective','Podgórze & Co'],
+   f:{pop:'1.4M metro',lang:'Polish',rent:'$946',sun:'1838'}},
+  {name:'Budapest', country:'Hungary',
+   d:{pace:5,nature:5,culture:9,social:7,warmth:4,afford:6,food:8,transit:8,openness:7,scale:7,safe:6.6,div:5},
+   cost:4.0, langs:["hungarian"], eng:false,
+   ind:['creative','tech','remote'],
+   why:'Thermal baths and ruin bars on opposite banks of the Danube.',
+   cos:['District VII Studio','Újlipótváros Works','Buda Hills Labs','District VII Collective','Újlipótváros & Co'],
+   f:{pop:'3.0M metro',lang:'Hungarian',rent:'$898',sun:'1988'}},
+  {name:'Bucharest', country:'Romania',
+   d:{pace:6,nature:4,culture:7,social:7,warmth:5,afford:7,food:7,transit:7,openness:7,scale:8,safe:7.2,div:4},
+   cost:3.1, langs:["romanian"], eng:false,
+   ind:['tech','finance','remote'],
+   why:'Belle époque bones, brutalist shoulders, fast wifi.',
+   cos:['Old Town Studio','Cotroceni Works','Floreasca Labs','Old Town Collective','Cotroceni & Co'],
+   f:{pop:'2.3M metro',lang:'Romanian',rent:'$717',sun:'2115'}},
+  {name:'Belgrade', country:'Serbia',
+   d:{pace:6,nature:5,culture:7,social:9,warmth:5,afford:6,food:8,transit:6,openness:7,scale:7,safe:6.2,div:4},
+   cost:3.5, langs:["serbian"], eng:false,
+   ind:['creative','tech','remote'],
+   why:'Splav nights where two rivers meet &mdash; hospitality at full strength.',
+   cos:['Dorćol Studio','Savamala Works','Zemun Labs','Dorćol Collective','Savamala & Co'],
+   f:{pop:'1.7M metro',lang:'Serbian',rent:'$871',sun:'2112'}},
+  {name:'Zagreb', country:'Croatia',
+   d:{pace:4,nature:6,culture:7,social:7,warmth:4,afford:6,food:8,transit:7,openness:7,scale:5,safe:7.8,div:3},
+   cost:3.8, langs:["croatian"], eng:false,
+   ind:['tech','creative','edu'],
+   why:'Café terraces from breakfast to blue hour.',
+   cos:['Tkalčićeva Studio','Trešnjevka Works','Maksimir Labs','Tkalčićeva Collective','Trešnjevka & Co'],
+   f:{pop:'1.1M metro',lang:'Croatian',rent:'$894',sun:'1913'}},
+  {name:'Ljubljana', country:'Slovenia',
+   d:{pace:3,nature:8,culture:7,social:6,warmth:4,afford:6,food:8,transit:8,openness:7,scale:3,safe:7.8,div:4},
+   cost:4.4, langs:["slovene"], eng:false,
+   ind:['tech','edu','creative'],
+   why:'A storybook capital with dragons on the bridge and Alps in reach.',
+   cos:['Trnovo Studio','Center Works','Šiška Labs','Trnovo Collective','Center & Co'],
+   f:{pop:'0.5M metro',lang:'Slovene',rent:'$1,090',sun:'1974'}},
+  {name:'Split', country:'Croatia',
+   d:{pace:4,nature:7,culture:7,social:7,warmth:8,afford:6,food:8,transit:5,openness:7,scale:4,safe:7.0,div:3},
+   cost:4.2, langs:["croatian"], eng:false,
+   ind:['hosp','remote','trades'],
+   why:'Life inside a Roman palace with the Adriatic at the door.',
+   cos:['Varoš Studio','Bačvice Works','Palace Quarter Labs','Varoš Collective','Bačvice & Co'],
+   f:{pop:'0.3M metro',lang:'Croatian',rent:'$1,036',sun:'2631'}},
+  {name:'Thessaloniki', country:'Greece',
+   d:{pace:5,nature:5,culture:9,social:9,warmth:7,afford:6,food:10,transit:5,openness:7,scale:6,safe:4.8,div:4},
+   cost:3.7, langs:["greek"], eng:false,
+   ind:['edu','hosp','creative'],
+   why:'Byzantine walls, student cafés, and the best meze in Greece.',
+   cos:['Ladadika Studio','Ano Poli Works','Valaoritou Labs','Ladadika Collective','Ano Poli & Co'],
+   f:{pop:'1.1M metro',lang:'Greek',rent:'$641',sun:'2660'}},
+  {name:'Tallinn', country:'Estonia',
+   d:{pace:4,nature:6,culture:8,social:5,warmth:2,afford:6,food:7,transit:8,openness:8,scale:4,safe:7.8,div:5},
+   cost:4.3, langs:["estonian"], eng:false,
+   ind:['tech','remote','creative'],
+   why:'Medieval towers with e-residency &mdash; the digital Hansa.',
+   cos:['Kalamaja Studio','Old Town Works','Telliskivi Labs','Kalamaja Collective','Old Town & Co'],
+   f:{pop:'0.6M metro',lang:'Estonian',rent:'$842',sun:'1923'}},
+  {name:'Riga', country:'Latvia',
+   d:{pace:4,nature:6,culture:8,social:6,warmth:2,afford:6,food:7,transit:7,openness:7,scale:5,safe:6.3,div:5},
+   cost:3.7, langs:["latvian"], eng:false,
+   ind:['tech','creative','trades'],
+   why:'Art nouveau facades over Baltic grit.',
+   cos:['Miera iela Studio','Āgenskalns Works','Centrs Labs','Miera iela Collective','Āgenskalns & Co'],
+   f:{pop:'0.9M metro',lang:'Latvian',rent:'$601',sun:'1754'}},
+  {name:'Vilnius', country:'Lithuania',
+   d:{pace:4,nature:6,culture:8,social:6,warmth:2,afford:6,food:7,transit:7,openness:8,scale:4,safe:7.1,div:4},
+   cost:3.7, langs:["lithuanian"], eng:false,
+   ind:['tech','edu','creative'],
+   why:'A baroque old town with a self-declared republic of artists inside.',
+   cos:['Užupis Studio','Old Town Works','Žvėrynas Labs','Užupis Collective','Old Town & Co'],
+   f:{pop:'0.7M metro',lang:'Lithuanian',rent:'$874',sun:'1691'}},
+  {name:'Tbilisi', country:'Georgia',
+   d:{pace:4,nature:7,culture:8,social:8,warmth:6,afford:7,food:9,transit:6,openness:8,scale:6,safe:7.4,div:4},
+   cost:2.8, langs:["georgian"], eng:false,
+   ind:['remote','creative','hosp'],
+   why:'Supra feasts, sulfur baths, and balconies leaning into the past.',
+   cos:['Vera Studio','Sololaki Works','Fabrika Labs','Vera Collective','Sololaki & Co'],
+   f:{pop:'1.2M metro',lang:'Georgian',rent:'$703',sun:'2046'}},
+  {name:'Istanbul', country:'Turkey',
+   d:{pace:8,nature:5,culture:10,social:8,warmth:6,afford:6,food:10,transit:7,openness:6,scale:10,safe:5.2,div:7},
+   cost:3.6, langs:["turkish"], eng:false,
+   ind:['creative','finance','hosp'],
+   why:'Two continents, ten thousand ferries, tea at every threshold.',
+   cos:['Kadıköy Studio','Beyoğlu Works','Balat Labs','Kadıköy Collective','Beyoğlu & Co'],
+   f:{pop:'16M metro',lang:'Turkish',rent:'$985',sun:'2026'}},
+  {name:'Izmir', country:'Turkey',
+   d:{pace:5,nature:6,culture:7,social:8,warmth:8,afford:7,food:9,transit:6,openness:7,scale:7,safe:6.7,div:5},
+   cost:3.0, langs:["turkish"], eng:false,
+   ind:['tech','hosp','remote'],
+   why:'The Aegean&rsquo;s liberal port &mdash; kordon sunsets and easy manners.',
+   cos:['Alsancak Studio','Karşıyaka Works','Bornova Labs','Alsancak Collective','Karşıyaka & Co'],
+   f:{pop:'4.4M metro',lang:'Turkish',rent:'$619',sun:'2917'}},
+  {name:'Valletta', country:'Malta',
+   d:{pace:3,nature:5,culture:8,social:7,warmth:9,afford:5,food:8,transit:6,openness:8,scale:2,safe:7.2,div:6},
+   cost:5.0, langs:["english", "maltese"], eng:true,
+   ind:['remote','finance','hosp'],
+   why:'A fortress city the size of a neighborhood, honey-gold at dusk.',
+   cos:['Strait Street Studio','Floriana Works','Sliema Labs','Strait Street Collective','Floriana & Co'],
+   f:{pop:'0.5M metro',lang:'Maltese & English',rent:'$1,300',sun:'3054'}},
+  {name:'Funchal', country:'Portugal',
+   d:{pace:2,nature:9,culture:6,social:6,warmth:8,afford:6,food:7,transit:5,openness:7,scale:3,safe:7.8,div:4},
+   cost:4.3, langs:["portuguese"], eng:false,
+   ind:['remote','hosp','health'],
+   why:'Levada walks above, harbor lights below &mdash; eternal spring, mid-Atlantic.',
+   cos:['Old Town Studio','Lido Works','Monte Labs','Old Town Collective','Lido & Co'],
+   f:{pop:'0.25M metro',lang:'Portuguese',rent:'$1,560',sun:'2310'}},
+  {name:'Marrakesh', country:'Morocco',
+   d:{pace:4,nature:6,culture:9,social:7,warmth:10,afford:8,food:9,transit:4,openness:7,scale:5,safe:5.5,div:5},
+   cost:2.2, langs:["arabic", "french"], eng:false,
+   ind:['hosp','creative','remote'],
+   why:'Ochre walls, mint tea, and the Atlas shimmering beyond the souks.',
+   cos:['The Medina Studio','Gueliz Works','Hivernage Labs','The Medina Collective','Gueliz & Co'],
+   f:{pop:'1.0M metro',lang:'Arabic & French',rent:'$506',sun:'3131'}},
+  {name:'Casablanca', country:'Morocco',
+   d:{pace:6,nature:4,culture:6,social:7,warmth:8,afford:8,food:8,transit:5,openness:6,scale:7,safe:4.5,div:5},
+   cost:2.5, langs:["arabic", "french"], eng:false,
+   ind:['finance','trades','hosp'],
+   why:'Morocco&rsquo;s working heart &mdash; deco boulevards and ocean spray.',
+   cos:['Habous Studio','Gauthier Works','Ain Diab Labs','Habous Collective','Gauthier & Co'],
+   f:{pop:'3.7M metro',lang:'Arabic & French',rent:'$647',sun:'3000'}},
+  {name:'Accra', country:'Ghana',
+   d:{pace:6,nature:5,culture:7,social:8,warmth:9,afford:7,food:8,transit:4,openness:7,scale:7,safe:5.2,div:5},
+   cost:2.9, langs:["english"], eng:true,
+   ind:['tech','creative','trades'],
+   why:'Highlife, hustle, and the Gulf of Guinea keeping time.',
+   cos:['Osu Studio','Jamestown Works','Labone Labs','Osu Collective','Jamestown & Co'],
+   f:{pop:'2.6M metro',lang:'English',rent:'$692',sun:'2432'}},
+  {name:'Lagos', country:'Nigeria',
+   d:{pace:9,nature:4,culture:8,social:9,warmth:9,afford:7,food:8,transit:3,openness:7,scale:10,safe:3.1,div:5},
+   cost:2.6, langs:["english"], eng:true,
+   ind:['tech','finance','creative'],
+   why:'Afrobeats at planetary volume &mdash; energy that bends the grid.',
+   cos:['Lekki Studio','Yaba Works','Victoria Island Labs','Lekki Collective','Yaba & Co'],
+   f:{pop:'16M metro',lang:'English',rent:'$731',sun:'1845'}},
+  {name:'Nairobi', country:'Kenya',
+   d:{pace:6,nature:8,culture:6,social:7,warmth:6,afford:8,food:7,transit:4,openness:7,scale:8,safe:4.1,div:6},
+   cost:2.3, langs:["english", "swahili"], eng:true,
+   ind:['tech','health','remote'],
+   why:'Silicon Savannah &mdash; giraffes at the city limits, startups downtown.',
+   cos:['Westlands Studio','Karen Works','Kilimani Labs','Westlands Collective','Karen & Co'],
+   f:{pop:'5.0M metro',lang:'English & Swahili',rent:'$421',sun:'2492'}},
+  {name:'Kigali', country:'Rwanda',
+   d:{pace:4,nature:8,culture:5,social:6,warmth:6,afford:8,food:6,transit:5,openness:8,scale:5,safe:7.2,div:4},
+   cost:2.2, langs:["english", "kinyarwanda"], eng:true,
+   ind:['tech','health','edu'],
+   why:'A thousand hills, spotless streets, and quiet determination.',
+   cos:['Kiyovu Studio','Nyamirambo Works','Kimihurura Labs','Kiyovu Collective','Nyamirambo & Co'],
+   f:{pop:'1.2M metro',lang:'Kinyarwanda & English',rent:'$672',sun:'2000'}},
+  {name:'Johannesburg', country:'South Africa',
+   d:{pace:7,nature:6,culture:7,social:8,warmth:7,afford:7,food:7,transit:3,openness:7,scale:9,safe:1.9,div:7},
+   cost:3.0, langs:["english", "zulu"], eng:true,
+   ind:['finance','tech','creative'],
+   why:'Gold-rush bones, jacaranda springs, and serious creative muscle.',
+   cos:['Maboneng Studio','Melville Works','Rosebank Labs','Maboneng Collective','Melville & Co'],
+   f:{pop:'6.0M metro',lang:'English & Zulu',rent:'$524',sun:'3124'}},
+  {name:'Cairo', country:'Egypt',
+   d:{pace:8,nature:3,culture:10,social:8,warmth:10,afford:8,food:8,transit:4,openness:6,scale:10,safe:5.0,div:4},
+   cost:1.6, langs:["arabic"], eng:false,
+   ind:['edu','finance','creative'],
+   why:'Five thousand years of city, still refusing to sleep.',
+   cos:['Zamalek Studio','Maadi Works','Downtown Labs','Zamalek Collective','Maadi & Co'],
+   f:{pop:'22M metro',lang:'Arabic',rent:'$225',sun:'3542'}},
+  {name:'Tel Aviv', country:'Israel',
+   d:{pace:8,nature:5,culture:8,social:9,warmth:9,afford:2,food:9,transit:5,openness:8,scale:7,safe:7.4,div:7},
+   cost:7.9, langs:["hebrew"], eng:false,
+   ind:['tech','creative','finance'],
+   why:'Bauhaus by the beach &mdash; startups by day, boulevards all night.',
+   cos:['Florentin Studio','Neve Tzedek Works','Rothschild Labs','Florentin Collective','Neve Tzedek & Co'],
+   f:{pop:'4.4M metro',lang:'Hebrew',rent:'$2,242',sun:'3311'}},
+  {name:'Doha', country:'Qatar',
+   d:{pace:6,nature:3,culture:6,social:5,warmth:10,afford:5,food:7,transit:6,openness:8,scale:7,safe:8.5,div:9},
+   cost:4.8, langs:["arabic", "english"], eng:true,
+   ind:['finance','edu','health'],
+   why:'A pearl-diving village that grew a skyline overnight.',
+   cos:['Msheireb Studio','West Bay Works','Katara Labs','Msheireb Collective','West Bay & Co'],
+   f:{pop:'2.4M metro',lang:'Arabic & English',rent:'$1,918',sun:'3400'}},
+  {name:'Abu Dhabi', country:'United Arab Emirates',
+   d:{pace:6,nature:4,culture:6,social:5,warmth:10,afford:5,food:7,transit:5,openness:8,scale:7,safe:8.9,div:9},
+   cost:5.1, langs:["arabic", "english"], eng:true,
+   ind:['finance','health','edu'],
+   why:'Calmer than its neighbor &mdash; museums rising from the sand.',
+   cos:['The Corniche Studio','Saadiyat Works','Al Zahiyah Labs','The Corniche Collective','Saadiyat & Co'],
+   f:{pop:'1.5M metro',lang:'Arabic & English',rent:'$1,967',sun:'3500'}},
+  {name:'Muscat', country:'Oman',
+   d:{pace:3,nature:7,culture:7,social:5,warmth:10,afford:7,food:7,transit:4,openness:7,scale:4,safe:8.1,div:6},
+   cost:3.2, langs:["arabic"], eng:false,
+   ind:['trades','hosp','health'],
+   why:'Frankincense air and mountains meeting a turquoise gulf.',
+   cos:['Muttrah Studio','Qurum Works','Ruwi Labs','Muttrah Collective','Qurum & Co'],
+   f:{pop:'1.6M metro',lang:'Arabic',rent:'$680',sun:'3493'}},
+  {name:'Osaka', country:'Japan',
+   d:{pace:7,nature:4,culture:8,social:9,warmth:7,afford:7,food:10,transit:9,openness:5,scale:9,safe:6.7,div:3},
+   cost:3.1, langs:["japanese"], eng:false,
+   ind:['hosp','trades','tech'],
+   why:'Japan&rsquo;s kitchen &mdash; comedy, neon, and zero pretension.',
+   cos:['Namba Studio','Nakazakicho Works','Tennoji Labs','Namba Collective','Nakazakicho & Co'],
+   f:{pop:'19M metro',lang:'Japanese',rent:'$697',sun:'2048'}},
+  {name:'Kyoto', country:'Japan',
+   d:{pace:3,nature:7,culture:10,social:5,warmth:6,afford:7,food:9,transit:7,openness:5,scale:6,safe:8.0,div:2},
+   cost:3.3, langs:["japanese"], eng:false,
+   ind:['creative','edu','hosp'],
+   why:'Two thousand temples keeping time by moss and maple.',
+   cos:['Gion Studio','Arashiyama Works','Demachiyanagi Labs','Gion Collective','Arashiyama & Co'],
+   f:{pop:'3.8M metro',lang:'Japanese',rent:'$700',sun:'1775'}},
+  {name:'Fukuoka', country:'Japan',
+   d:{pace:5,nature:6,culture:7,social:7,warmth:7,afford:7,food:9,transit:7,openness:6,scale:6,safe:7.8,div:2},
+   cost:2.9, langs:["japanese"], eng:false,
+   ind:['tech','hosp','trades'],
+   why:'Ramen stalls by the bay &mdash; Japan&rsquo;s easiest big city.',
+   cos:['Daimyo Studio','Yakuin Works','Ohori Labs','Daimyo Collective','Yakuin & Co'],
+   f:{pop:'2.6M metro',lang:'Japanese',rent:'$550',sun:'1889'}},
+  {name:'Sapporo', country:'Japan',
+   d:{pace:4,nature:8,culture:6,social:6,warmth:2,afford:7,food:9,transit:6,openness:5,scale:6,safe:7.8,div:2},
+   cost:2.8, langs:["japanese"], eng:false,
+   ind:['trades','hosp','tech'],
+   why:'Powder snow, beer, and wide northern streets.',
+   cos:['Susukino Studio','Maruyama Works','Odori Labs','Susukino Collective','Maruyama & Co'],
+   f:{pop:'2.7M metro',lang:'Japanese',rent:'$500',sun:'1740'}},
+  {name:'Busan', country:'South Korea',
+   d:{pace:5,nature:7,culture:7,social:7,warmth:6,afford:6,food:9,transit:7,openness:5,scale:8,safe:7.5,div:2},
+   cost:3.5, langs:["korean"], eng:false,
+   ind:['trades','hosp','tech'],
+   why:'Mountains dropping into harbors &mdash; Korea with sand between its toes.',
+   cos:['Haeundae Studio','Jeonpo Works','Gwangalli Labs','Haeundae Collective','Jeonpo & Co'],
+   f:{pop:'3.4M metro',lang:'Korean',rent:'$600',sun:'2327'}},
+  {name:'Shanghai', country:'China',
+   d:{pace:9,nature:3,culture:8,social:7,warmth:6,afford:7,food:9,transit:9,openness:6,scale:10,safe:7.3,div:4},
+   cost:3.3, langs:["mandarin"], eng:false,
+   ind:['finance','tech','creative'],
+   why:'Deco towers and maglev speed &mdash; the future, already busy.',
+   cos:['French Concession Studio','Jingan Works','Xuhui Labs','French Concession Collective','Jingan & Co'],
+   f:{pop:'27M metro',lang:'Mandarin',rent:'$948',sun:'1776'}},
+  {name:'Beijing', country:'China',
+   d:{pace:8,nature:4,culture:10,social:6,warmth:4,afford:7,food:8,transit:8,openness:4,scale:10,safe:7.4,div:3},
+   cost:3.1, langs:["mandarin"], eng:false,
+   ind:['edu','tech','finance'],
+   why:'Hutong lanes in the shadow of empire &mdash; history at imperial scale.',
+   cos:['Gulou Studio','Sanlitun Works','Wudaokou Labs','Gulou Collective','Sanlitun & Co'],
+   f:{pop:'21M metro',lang:'Mandarin',rent:'$954',sun:'2671'}},
+  {name:'Shenzhen', country:'China',
+   d:{pace:10,nature:5,culture:5,social:6,warmth:9,afford:7,food:8,transit:9,openness:6,scale:10,safe:7.5,div:4},
+   cost:2.9, langs:["mandarin"], eng:false,
+   ind:['tech','finance','trades'],
+   why:'A fishing village that became the world&rsquo;s hardware lab in one lifetime.',
+   cos:['Nanshan Studio','Futian Works','OCT Loft Labs','Nanshan Collective','Futian & Co'],
+   f:{pop:'17M metro',lang:'Mandarin',rent:'$732',sun:'1900'}},
+  {name:'Chengdu', country:'China',
+   d:{pace:4,nature:6,culture:8,social:8,warmth:5,afford:8,food:10,transit:7,openness:6,scale:9,safe:7.5,div:2},
+   cost:2.0, langs:["mandarin"], eng:false,
+   ind:['tech','creative','hosp'],
+   why:'Teahouse afternoons, hotpot nights, pandas up the road.',
+   cos:['Yulin Studio','Kuanzhai Works','Jinli Labs','Yulin Collective','Kuanzhai & Co'],
+   f:{pop:'21M metro',lang:'Mandarin',rent:'$470',sun:'1073'}},
+  {name:'Hong Kong', country:'Hong Kong',
+   d:{pace:9,nature:7,culture:8,social:6,warmth:8,afford:3,food:10,transit:10,openness:7,scale:9,safe:7.8,div:8},
+   cost:6.8, langs:["cantonese", "english"], eng:true,
+   ind:['finance','tech','creative'],
+   why:'Peak trams and dim sum &mdash; density done with style.',
+   cos:['Sheung Wan Studio','Sai Ying Pun Works','Kowloon Labs','Sheung Wan Collective','Sai Ying Pun & Co'],
+   f:{pop:'7.5M',lang:'Cantonese & English',rent:'$2,236',sun:'1836'}},
+  {name:'Hanoi', country:'Vietnam',
+   d:{pace:6,nature:5,culture:9,social:7,warmth:7,afford:8,food:10,transit:4,openness:6,scale:8,safe:6.6,div:2},
+   cost:2.0, langs:["vietnamese"], eng:false,
+   ind:['remote','creative','hosp'],
+   why:'Motorbike rivers around a quiet lake &mdash; phở before sunrise.',
+   cos:['Old Quarter Studio','Tay Ho Works','Ba Dinh Labs','Old Quarter Collective','Tay Ho & Co'],
+   f:{pop:'8.4M metro',lang:'Vietnamese',rent:'$414',sun:'1466'}},
+  {name:'Ho Chi Minh City', country:'Vietnam',
+   d:{pace:8,nature:4,culture:7,social:8,warmth:10,afford:8,food:10,transit:4,openness:7,scale:10,safe:5.0,div:3},
+   cost:2.2, langs:["vietnamese"], eng:false,
+   ind:['tech','remote','hosp'],
+   why:'Saigon runs on iced coffee and momentum.',
+   cos:['Thao Dien Studio','District 1 Works','District 3 Labs','Thao Dien Collective','District 1 & Co'],
+   f:{pop:'9.3M metro',lang:'Vietnamese',rent:'$573',sun:'2489'}},
+  {name:'Da Nang', country:'Vietnam',
+   d:{pace:4,nature:8,culture:5,social:6,warmth:9,afford:8,food:9,transit:4,openness:8,scale:5,safe:6.8,div:4},
+   cost:2.0, langs:["vietnamese"], eng:false,
+   ind:['remote','hosp','tech'],
+   why:'Beach mornings, mountain passes, remote-work afternoons.',
+   cos:['An Thuong Studio','My Khe Works','Son Tra Labs','An Thuong Collective','My Khe & Co'],
+   f:{pop:'1.2M metro',lang:'Vietnamese',rent:'$519',sun:'2182'}},
+  {name:'Phnom Penh', country:'Cambodia',
+   d:{pace:5,nature:4,culture:7,social:7,warmth:10,afford:7,food:8,transit:3,openness:8,scale:6,safe:5.0,div:4},
+   cost:2.7, langs:["khmer"], eng:false,
+   ind:['remote','hosp','trades'],
+   why:'Riverfront gold and moto dust &mdash; a capital finding its stride.',
+   cos:['BKK1 Studio','Riverside Works','Russian Market Labs','BKK1 Collective','Riverside & Co'],
+   f:{pop:'2.3M metro',lang:'Khmer',rent:'$618',sun:'2700'}},
+  {name:'Kuala Lumpur', country:'Malaysia',
+   d:{pace:6,nature:5,culture:7,social:7,warmth:10,afford:7,food:9,transit:7,openness:8,scale:8,safe:4.1,div:8},
+   cost:2.7, langs:["english", "malay"], eng:true,
+   ind:['tech','finance','hosp'],
+   why:'Three cuisines arguing deliciously beneath the towers.',
+   cos:['Bangsar Studio','Chow Kit Works','KLCC Labs','Bangsar Collective','Chow Kit & Co'],
+   f:{pop:'8.6M metro',lang:'Malay & English',rent:'$611',sun:'2124'}},
+  {name:'Penang', country:'Malaysia',
+   d:{pace:3,nature:6,culture:9,social:7,warmth:10,afford:8,food:10,transit:4,openness:8,scale:4,safe:7.1,div:7},
+   cost:2.2, langs:["english", "malay"], eng:true,
+   ind:['remote','hosp','creative'],
+   why:'Street art and street food sharing the same shophouse walls.',
+   cos:['George Town Studio','Tanjong Tokong Works','Air Itam Labs','George Town Collective','Tanjong Tokong & Co'],
+   f:{pop:'0.8M metro',lang:'Malay & English',rent:'$408',sun:'2480'}},
+  {name:'Jakarta', country:'Indonesia',
+   d:{pace:8,nature:3,culture:7,social:8,warmth:10,afford:8,food:9,transit:5,openness:7,scale:10,safe:4.7,div:5},
+   cost:2.0, langs:["indonesian"], eng:false,
+   ind:['finance','tech','creative'],
+   why:'A megacity&rsquo;s worth of warmth stuck in traffic together.',
+   cos:['Kemang Studio','Menteng Works','SCBD Labs','Kemang Collective','Menteng & Co'],
+   f:{pop:'33M metro',lang:'Indonesian',rent:'$369',sun:'2983'}},
+  {name:'Canggu', country:'Indonesia',
+   d:{pace:2,nature:8,culture:5,social:8,warmth:10,afford:7,food:8,transit:3,openness:9,scale:3,safe:6.2,div:7},
+   cost:3.2, langs:["indonesian"], eng:false,
+   ind:['remote','creative','hosp'],
+   why:'Rice terraces, surf breaks, and half the world&rsquo;s laptops.',
+   cos:['Batu Bolong Studio','Berawa Works','Pererenan Labs','Batu Bolong Collective','Berawa & Co'],
+   f:{pop:'0.1M',lang:'Indonesian',rent:'$383',sun:'2700'}},
+  {name:'Manila', country:'Philippines',
+   d:{pace:8,nature:3,culture:7,social:9,warmth:10,afford:7,food:8,transit:4,openness:8,scale:10,safe:3.5,div:5},
+   cost:2.6, langs:["english", "filipino"], eng:true,
+   ind:['tech','finance','hosp'],
+   why:'Karaoke-hearted and typhoon-tough &mdash; warmth you can lean on.',
+   cos:['Poblacion Studio','BGC Works','Intramuros Labs','Poblacion Collective','BGC & Co'],
+   f:{pop:'24M metro',lang:'Filipino & English',rent:'$539',sun:'2103'}},
+  {name:'Cebu', country:'Philippines',
+   d:{pace:5,nature:7,culture:6,social:8,warmth:10,afford:8,food:8,transit:3,openness:8,scale:6,safe:5.1,div:4},
+   cost:2.3, langs:["cebuano", "english"], eng:true,
+   ind:['remote','tech','hosp'],
+   why:'An island city &mdash; reefs on weekends, night shifts for the world.',
+   cos:['IT Park Studio','Lahug Works','Mactan Labs','IT Park Collective','Lahug & Co'],
+   f:{pop:'3.0M metro',lang:'Cebuano & English',rent:'$504',sun:'2100'}},
+  {name:'Mumbai', country:'India',
+   d:{pace:10,nature:4,culture:9,social:8,warmth:9,afford:8,food:9,transit:6,openness:7,scale:10,safe:5.6,div:6},
+   cost:2.2, langs:["english", "hindi", "marathi"], eng:true,
+   ind:['finance','creative','tech'],
+   why:'Bollywood, dabbawalas, and dreams packed shoulder to shoulder.',
+   cos:['Bandra Studio','Colaba Works','Lower Parel Labs','Bandra Collective','Colaba & Co'],
+   f:{pop:'21M metro',lang:'Hindi, Marathi & English',rent:'$644',sun:'2584'}},
+  {name:'Delhi', country:'India',
+   d:{pace:8,nature:4,culture:10,social:7,warmth:8,afford:8,food:9,transit:6,openness:5,scale:10,safe:4.1,div:5},
+   cost:1.5, langs:["english", "hindi"], eng:true,
+   ind:['edu','finance','creative'],
+   why:'Seven cities deep &mdash; empires layered like parathas.',
+   cos:['Hauz Khas Studio','Connaught Place Works','Shahpur Jat Labs','Hauz Khas Collective','Connaught Place & Co'],
+   f:{pop:'32M metro',lang:'Hindi & English',rent:'$274',sun:'2685'}},
+  {name:'Bengaluru', country:'India',
+   d:{pace:7,nature:6,culture:7,social:7,warmth:6,afford:8,food:8,transit:4,openness:8,scale:10,safe:4.6,div:6},
+   cost:1.6, langs:["english", "kannada"], eng:true,
+   ind:['tech','edu','health'],
+   why:'India&rsquo;s garden-city code engine &mdash; filter coffee and cool evenings.',
+   cos:['Indiranagar Studio','Koramangala Works','Malleswaram Labs','Indiranagar Collective','Koramangala & Co'],
+   f:{pop:'13M metro',lang:'Kannada & English',rent:'$321',sun:'2361'}},
+  {name:'Colombo', country:'Sri Lanka',
+   d:{pace:5,nature:6,culture:7,social:7,warmth:10,afford:8,food:8,transit:4,openness:7,scale:6,safe:5.7,div:4},
+   cost:2.4, langs:["english", "sinhala", "tamil"], eng:true,
+   ind:['remote','trades','hosp'],
+   why:'Ocean trains, king coconut, and colonial verandas.',
+   cos:['Cinnamon Gardens Studio','Fort Works','Mount Lavinia Labs','Cinnamon Gardens Collective','Fort & Co'],
+   f:{pop:'2.4M metro',lang:'Sinhala, Tamil & English',rent:'$554',sun:'2621'}},
+  {name:'Kathmandu', country:'Nepal',
+   d:{pace:4,nature:9,culture:9,social:7,warmth:5,afford:8,food:7,transit:3,openness:7,scale:6,safe:6.4,div:4},
+   cost:1.5, langs:["nepali"], eng:false,
+   ind:['remote','creative','edu'],
+   why:'Prayer flags over brick lanes &mdash; the Himalaya on the horizon.',
+   cos:['Thamel Studio','Patan Works','Boudha Labs','Thamel Collective','Patan & Co'],
+   f:{pop:'3.0M metro',lang:'Nepali',rent:'$222',sun:'2214'}},
+  {name:'Almaty', country:'Kazakhstan',
+   d:{pace:5,nature:9,culture:6,social:6,warmth:4,afford:7,food:7,transit:6,openness:6,scale:7,safe:4.7,div:6},
+   cost:2.8, langs:["kazakh", "russian"], eng:false,
+   ind:['tech','finance','edu'],
+   why:'Apple orchards and alpine ridges at the edge of the steppe.',
+   cos:['Golden Quarter Studio','Kok-Tobe Works','Medeu Labs','Golden Quarter Collective','Kok-Tobe & Co'],
+   f:{pop:'2.2M metro',lang:'Kazakh & Russian',rent:'$801',sun:'2356'}},
+  {name:'Brisbane', country:'Australia',
+   d:{pace:5,nature:7,culture:6,social:7,warmth:9,afford:4,food:7,transit:6,openness:8,scale:7,safe:6.2,div:8},
+   cost:5.7, langs:["english"], eng:true,
+   ind:['tech','health','trades'],
+   why:'River bends, jacarandas, and a winter that forgets to arrive.',
+   cos:['West End Studio','Fortitude Valley Works','New Farm Labs','West End Collective','Fortitude Valley & Co'],
+   f:{pop:'2.7M metro',lang:'English',rent:'$2,071',sun:'2968'}},
+  {name:'Perth', country:'Australia',
+   d:{pace:4,nature:8,culture:5,social:6,warmth:9,afford:4,food:7,transit:5,openness:8,scale:6,safe:5.8,div:8},
+   cost:5.8, langs:["english"], eng:true,
+   ind:['trades','health','tech'],
+   why:'The world&rsquo;s most remote big city &mdash; beaches all to yourself.',
+   cos:['Fremantle Studio','Northbridge Works','Leederville Labs','Fremantle Collective','Northbridge & Co'],
+   f:{pop:'2.2M metro',lang:'English',rent:'$1,951',sun:'3230'}},
+  {name:'Adelaide', country:'Australia',
+   d:{pace:3,nature:7,culture:7,social:6,warmth:7,afford:4,food:8,transit:5,openness:8,scale:5,safe:6.7,div:7},
+   cost:5.6, langs:["english"], eng:true,
+   ind:['health','edu','trades'],
+   why:'Festivals, wine hills, and twenty minutes to everything.',
+   cos:['North Adelaide Studio','Norwood Works','Glenelg Labs','North Adelaide Collective','Norwood & Co'],
+   f:{pop:'1.4M metro',lang:'English',rent:'$1,804',sun:'2765'}},
+  {name:'Hobart', country:'Australia',
+   d:{pace:2,nature:9,culture:7,social:5,warmth:4,afford:4,food:8,transit:4,openness:7,scale:3,safe:6.6,div:5},
+   cost:5.5, langs:["english"], eng:true,
+   ind:['creative','hosp','trades'],
+   why:'Island light, wild art, and a mountain over the harbor.',
+   cos:['Battery Point Studio','Salamanca Works','North Hobart Labs','Battery Point Collective','Salamanca & Co'],
+   f:{pop:'0.25M metro',lang:'English',rent:'$1,863',sun:'2336'}},
+  {name:'Wellington', country:'New Zealand',
+   d:{pace:4,nature:8,culture:8,social:6,warmth:3,afford:5,food:8,transit:7,openness:8,scale:4,safe:6.7,div:8},
+   cost:4.9, langs:["english", "m\u0101ori"], eng:true,
+   ind:['creative','tech','edu'],
+   why:'A windy little capital with film-set imagination.',
+   cos:['Cuba Street Studio','Aro Valley Works','Mount Victoria Labs','Cuba Street Collective','Aro Valley & Co'],
+   f:{pop:'0.4M metro',lang:'English & Māori',rent:'$1,296',sun:'2059'}},
+  {name:'Christchurch', country:'New Zealand',
+   d:{pace:3,nature:8,culture:6,social:5,warmth:4,afford:6,food:7,transit:6,openness:8,scale:4,safe:5.5,div:6},
+   cost:4.3, langs:["english"], eng:true,
+   ind:['trades','health','tech'],
+   why:'The rebuilt garden city &mdash; the Alps an hour from the office.',
+   cos:['Riccarton Studio','Sumner Works','New Brighton Labs','Riccarton Collective','Sumner & Co'],
+   f:{pop:'0.4M metro',lang:'English',rent:'$1,278',sun:'2070'}},
+  {name:'Queenstown', country:'New Zealand',
+   d:{pace:3,nature:10,culture:5,social:7,warmth:3,afford:4,food:7,transit:4,openness:8,scale:2,safe:7.5,div:6},
+   cost:5.5, langs:["english"], eng:true,
+   ind:['hosp','remote','trades'],
+   why:'The adrenaline capital in a postcard &mdash; lake, peaks, repeat.',
+   cos:['Fernhill Studio','Frankton Works','Arrowtown Labs','Fernhill Collective','Frankton & Co'],
+   f:{pop:'0.05M',lang:'English',rent:'$1,600',sun:'1921'}},
+];
+
+const ROLES = {
+  tech:     ['Product Engineer','Frontend Developer','Data Analyst','Platform Engineer','Product Manager'],
+  creative: ['Brand Designer','Art Director','Motion Designer','UX Writer','Studio Producer'],
+  finance:  ['Financial Analyst','Portfolio Associate','Risk Analyst','Fintech Product Lead','Treasury Manager'],
+  health:   ['Registered Nurse','Physiotherapist','Clinical Researcher','Health Data Analyst','Care Coordinator'],
+  edu:      ['Curriculum Designer','Language Instructor','Learning Technologist','Program Coordinator','Lecturer'],
+  hosp:     ['Head of Guest Experience','Sous Chef','Café Manager','Events Producer','Sommelier'],
+  trades:   ['Cabinetmaker','Electrician','Bike Mechanic','Metal Fabricator','Restoration Carpenter'],
+  remote:   ['Remote Product Designer','Content Strategist','Customer Success Lead','Developer Advocate','Operations Manager'],
+};
+const MODES = ['Hybrid','On-site','Remote-friendly','Flexible'];
+
+/* pay: field base salary × local cost-of-living factor × seniority step.
+   Deterministic — the same city and field always price the same. */
+const FIELD_BASE = {tech:96, finance:92, health:72, creative:64, edu:56, hosp:46, trades:60, remote:70};
+function payBand(city, fieldId, i){
+  const colFactor = 0.55 + city.cost * 0.09;      /* Kathmandu ≈0.68 … Zurich ≈1.45 */
+  const lo = Math.round(FIELD_BASE[fieldId] * colFactor * (0.82 + i * 0.12));
+  const hi = Math.round(lo * 1.28);
+  return '$' + lo + 'k–$' + hi + 'k';
+}
+
+/* ================= questions (20) ================= */
+
+const QUESTIONS = [
+  { type:'cards', key:'morning',
+    title:'It’s early, and the day is yours. Where are you?',
+    opts:[
+      {t:'Barefoot on an empty beach', s:'salt air, no plans', fx:{nature:2,warmth:2,pace:-2}},
+      {t:'A café that knows your order', s:'a window seat, a slow start', fx:{culture:2,social:1,food:1}},
+      {t:'On a trail before the sun is up', s:'pines, switchbacks, quiet', fx:{nature:3,pace:-1,warmth:-1}},
+      {t:'Watching the skyline from a train', s:'headphones in, city waking up', fx:{pace:3,culture:1,transit:1,scale:1}},
+    ]},
+  { type:'slider', key:'pace',
+    title:'How fast should life move?',
+    left:'slow tide', right:'full current', dim:'pace' },
+  { type:'cards', key:'weather',
+    title:'Pick a sky to live under.',
+    opts:[
+      {t:'Endless summer', s:'sunscreen as a lifestyle', fx:{warmth:3}},
+      {t:'Four proper seasons', s:'snow, blossoms, the whole reel', fx:{warmth:-1}},
+      {t:'Cool, grey, and moody', s:'sweaters and good lighting', fx:{warmth:-3,culture:1}},
+      {t:'Mild and golden', s:'spring that never quite leaves', fx:{warmth:1,nature:1}},
+    ]},
+  { type:'cards', key:'window',
+    title:'What should be outside your window?',
+    opts:[
+      {t:'The open sea', s:'weather rolling in over water', fx:{nature:2,warmth:1,scale:-1}},
+      {t:'Mountains going blue in the distance', s:'a horizon with teeth', fx:{nature:3,scale:-1}},
+      {t:'Rooftops and water towers', s:'a million lit windows', fx:{scale:2,culture:1,pace:1}},
+      {t:'Old streets, older stories', s:'cobbles, shutters, church bells', fx:{culture:2,scale:-1,transit:1}},
+    ]},
+  { type:'slider', key:'green',
+    title:'How much green does a life need?',
+    left:'a plant on the windowsill', right:'forest at the front door', dim:'nature' },
+  { type:'cards', key:'weekend',
+    title:'A perfect Saturday looks like…',
+    opts:[
+      {t:'Galleries, vinyl, a late film', s:'culture in heavy rotation', fx:{culture:3,social:1}},
+      {t:'A summit and sore legs', s:'earn the view', fx:{nature:3,social:-1}},
+      {t:'A street-food crawl with friends', s:'order one of everything', fx:{social:3,food:2,warmth:1}},
+      {t:'Doing beautifully little', s:'a book, a balcony, a nap', fx:{pace:-3,social:-1}},
+    ]},
+  { type:'cards', key:'noise',
+    title:'A sound you could live inside:',
+    opts:[
+      {t:'Waves arriving, unhurried', s:'the oldest metronome', fx:{nature:2,warmth:1,scale:-1}},
+      {t:'The murmur of a full café', s:'cups, spoons, low laughter', fx:{social:1,culture:1,food:1}},
+      {t:'A train humming somewhere below', s:'the city’s pulse, underground', fx:{transit:2,scale:2}},
+      {t:'Birdsong before anyone’s awake', s:'the day, still folded', fx:{nature:2,pace:-2}},
+    ]},
+  { type:'cards', key:'dinner',
+    title:'Dinner tonight. What sounds right?',
+    opts:[
+      {t:'Night-market stalls, plastic stools', s:'follow the smoke and the queue', fx:{food:3,social:1,warmth:1}},
+      {t:'A tasting menu worth dressing up for', s:'nine courses, no decisions', fx:{food:2,culture:1,scale:1}},
+      {t:'Market produce, cooked slow at home', s:'radio on, wine open', fx:{food:1,nature:1,pace:-2}},
+      {t:'Whatever’s still open at midnight', s:'the city should keep up with you', fx:{pace:2,scale:2,food:-1}},
+    ]},
+  { type:'slider', key:'foodie',
+    title:'Food, in your life, is…',
+    left:'fuel, honestly', right:'the reason to travel', dim:'food' },
+  { type:'cards', key:'moving',
+    title:'How do you love to move through a city?',
+    opts:[
+      {t:'On foot, everywhere, always', s:'the best way to learn a place', fx:{transit:3,culture:1}},
+      {t:'A bike with a basket', s:'wind, bells, bridges', fx:{transit:2,nature:1,pace:-1}},
+      {t:'A metro that runs at 2 a.m.', s:'swipe in, doze off, arrive', fx:{transit:2,pace:1,scale:2}},
+      {t:'My own car, windows down', s:'freedom measured in miles', fx:{transit:-3,nature:1,scale:-2}},
+    ]},
+  { type:'multichips', key:'languages',
+    title:'Which languages could you live your life in?',
+    opts:['English','Spanish','French','German','Portuguese','Italian','Dutch','Japanese','Korean','Mandarin','Cantonese','Arabic','Turkish','Thai','Vietnamese','Hindi'] },
+  { type:'cards', key:'langlearn',
+    title:'And a city where you don’t speak the language?',
+    opts:[
+      {t:'An adventure — I’ll learn at the market', s:'flashcards and friendly mistakes', fx:{openness:1}},
+      {t:'Fine, as long as English gets me by', s:'menus can stay mysterious', fx:{}},
+      {t:'Workable, but I’d feel the distance', s:'small talk matters to me', fx:{}},
+      {t:'Honestly, a dealbreaker', s:'words are how I belong', fx:{}},
+    ]},
+  { type:'cards', key:'friday',
+    title:'Friday, eleven p.m. Where are you?',
+    opts:[
+      {t:'Lost on a dance floor', s:'strangers becoming friends', fx:{social:2,scale:1,pace:1}},
+      {t:'A dinner that refuses to end', s:'someone just ordered more wine', fx:{food:2,social:1}},
+      {t:'Home hours ago, gloriously', s:'the good kind of quiet', fx:{pace:-2,social:-2}},
+      {t:'A long walk through lit streets', s:'the city talking to itself', fx:{culture:1,transit:1,pace:-1}},
+    ]},
+  { type:'slider', key:'social',
+    title:'Where does your social battery sit?',
+    left:'a few kindred spirits', right:'the more the merrier', dim:'social' },
+  { type:'cards', key:'rain',
+    title:'It’s raining sideways. How do you feel?',
+    opts:[
+      {t:'Perfect. Lamps on, world off', s:'an excuse, gratefully accepted', fx:{pace:-1,culture:1,warmth:-1}},
+      {t:'Restless — I’d move for the sun', s:'solar-powered, no apologies', fx:{warmth:3}},
+      {t:'Out in it, hood up', s:'weather is not a cancellation', fx:{nature:2,warmth:-2}},
+      {t:'The city looks best like this', s:'neon doubled in the puddles', fx:{scale:1,culture:2}},
+    ]},
+  { type:'cards', key:'souvenir',
+    title:'You always come home from a trip with…',
+    opts:[
+      {t:'Spices from a market stall', s:'and a plan to recreate that dish', fx:{food:2,openness:1}},
+      {t:'A record, a print, a book', s:'proof of what the place makes', fx:{culture:2}},
+      {t:'A stone from the summit', s:'and mud that never washes out', fx:{nature:2}},
+      {t:'Phone numbers of new friends', s:'the trip isn’t really over', fx:{social:2,openness:2}},
+    ]},
+  { type:'slider', key:'divcare',
+    title:'The street outside your door should sound like…',
+    left:'home, mostly', right:'everywhere at once', dim:'div' },
+  { type:'slider', key:'scale',
+    title:'And how big should it all feel?',
+    left:'a town that knows you', right:'a city that never ends', dim:'scale' },
+  { type:'cards', key:'history',
+    title:'A city should feel…',
+    opts:[
+      {t:'Brand new and still rising', s:'cranes on the skyline, room to build', fx:{scale:1,pace:1,openness:1}},
+      {t:'Centuries deep', s:'every wall has heard things', fx:{culture:2,scale:-1}},
+      {t:'Wild at the edges', s:'nature never fully surrendered', fx:{nature:2}},
+      {t:'Lived-in and layered', s:'a palimpsest with good bars', fx:{culture:1,openness:1,transit:1}},
+    ]},
+  { type:'slider', key:'openness',
+    title:'Starting over somewhere new…',
+    left:'is easier among old friends', right:'is the whole point', dim:'openness' },
+  { type:'cards', key:'workstyle',
+    title:'Your best work happens…',
+    opts:[
+      {t:'In a buzzing studio of others', s:'energy is contagious', fx:{social:2,pace:1}},
+      {t:'In a quiet room with a view', s:'deep focus, long horizons', fx:{nature:1,pace:-1}},
+      {t:'At my favorite corner café', s:'third place, first choice', fx:{food:1,culture:1,transit:1}},
+      {t:'Anywhere with wifi and light', s:'the world is the office', fx:{openness:2}},
+    ]},
+  { type:'slider', key:'safecare',
+    title:'Walking home at midnight, you want to feel…',
+    left:'alive to the edges', right:'completely at ease', dim:'safe' },
+  { type:'cards', key:'safetrade',
+    title:'A rougher edge is worth it when a city gives you…',
+    opts:[
+      {t:'Culture and energy at full volume', s:'the good chaos', fx:{}},
+      {t:'A cost of living that sets me free', s:'risk, discounted', fx:{}},
+      {t:'Wild nature at the doorstep', s:'the trailhead forgives a lot', fx:{}},
+      {t:'Nothing — safety first, always', s:'no trade I’d take', fx:{}},
+    ]},
+  { type:'slider', key:'budget',
+    title:'How tight should the budget feel?',
+    left:'keep it light', right:'comfort is worth it', dim:'budget' },
+  { type:'cards', key:'worthit',
+    title:'Paying big-city prices is only fine when it buys…',
+    opts:[
+      {t:'Streets that work — transit, safety, order', s:'the machine should run', fx:{}},
+      {t:'World-class food and culture', s:'I pay for wonder', fx:{}},
+      {t:'Nature within reach of my door', s:'mountains amortize the rent', fx:{}},
+      {t:'Nothing — cheap is the feature', s:'money left over is freedom', fx:{}},
+    ]},
+  { type:'chips', key:'field',
+    title:'What work do you want to wake up for?' },
+];
+
+/* ================= state ================= */
+
+const DIMS = ['pace','nature','culture','social','warmth','afford','food','transit','openness','scale','safe','div'];
+const user = {};
+let answers = {};
+let qIndex = 0;
+let matches = [];
+let ranked = [];
+let currentCity = null;
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+};
+
+/* ================= view transitions ================= */
+
+let activeView = 'view-hero';
+function go(id){
+  const from = $(activeView), to = $(id);
+  if (from === to) return;
+  from.classList.add('leaving');
+  setTimeout(()=>{
+    from.classList.remove('active','leaving');
+    to.classList.add('active');
+    activeView = id;
+    window.scrollTo({top:0, behavior:'instant'});
+  }, 360);
+}
+
+/* ================= generative skylines ================= */
+
+function rngFor(str){
+  let h = 2166136261 >>> 0;
+  for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h,16777619); }
+  return function(){
+    h += 0x6D2B79F5; let t = h;
+    t = Math.imul(t ^ t>>>15, t|1);
+    t ^= t + Math.imul(t ^ t>>>7, t|61);
+    return ((t ^ t>>>14)>>>0)/4294967296;
+  };
+}
+function hexRgb(hex){
+  hex = hex.replace('#','').trim();
+  if (hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+  return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+}
+const mixC = (a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+const rgb = c=>'rgb('+c.join(',')+')';
+const rgba = (c,a)=>'rgba('+c.join(',')+','+a+')';
+
+/* Draws a seamless, periodic dusk skyline for a city.
+   copies=2 with the CSS pan of exactly one period gives an endless loop. */
+function drawCitySky(cv, city, o){
+  o = Object.assign({transparent:false, P:720, H:150, copies:2}, o||{});
+  const P=o.P, H=o.H;
+  cv.width = P*o.copies; cv.height = H;
+  const x = cv.getContext('2d');
+  const rnd = rngFor(city.name);
+  const d = city.d, w = d.warmth/10;
+  const offs = []; for(let i=0;i<o.copies;i++) offs.push(i*P);
+  const inkC = o.transparent
+    ? hexRgb(getComputedStyle(document.documentElement).getPropertyValue('--ink') || '#1F3038')
+    : null;
+
+  if (!o.transparent){
+    const top = mixC([15,26,35],[36,29,41], w);
+    const bot = mixC([28,52,63],[92,60,35], w);
+    const g = x.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, rgb(top)); g.addColorStop(1, rgb(bot));
+    x.fillStyle = g; x.fillRect(0,0,cv.width,H);
+
+    /* stars */
+    const stars = 26 + Math.round(d.nature*2.5);
+    x.fillStyle = 'rgba(233,240,238,.5)';
+    for (let i=0;i<stars;i++){
+      const sx = rnd()*P, sy = rnd()*H*.5, a = .1+rnd()*.35;
+      x.globalAlpha = a;
+      offs.forEach(off=> x.fillRect(sx+off, sy, 1.4, 1.4));
+    }
+    x.globalAlpha = 1;
+
+    /* horizon glow */
+    const gl = x.createLinearGradient(0,H*.4,0,H);
+    gl.addColorStop(0,'rgba(240,178,78,0)');
+    gl.addColorStop(1,'rgba(240,178,78,'+(0.14+w*0.14)+')');
+    x.fillStyle = gl; x.fillRect(0,H*.4,cv.width,H*.6);
+
+    /* moon */
+    const mx = 60+rnd()*(P-120), my = 16+rnd()*24, mr = 6+rnd()*5;
+    x.save();
+    x.shadowColor = 'rgba(245,201,126,.9)'; x.shadowBlur = 16;
+    x.fillStyle = '#F2E9D8';
+    offs.forEach(off=>{ x.beginPath(); x.arc(mx+off,my,mr,0,7); x.fill(); });
+    x.restore();
+  }
+
+  const backC  = o.transparent ? rgba(inkC,.10) : rgb(mixC([30,56,68],[70,52,45], w*.6));
+  const frontC = o.transparent ? rgba(inkC,.18) : '#0C1922';
+  const hillC  = o.transparent ? rgba(inkC,.07) : rgba(mixC([24,44,54],[62,44,34], w), .85);
+  const treeC  = o.transparent ? rgba(inkC,.22) : '#0A141A';
+  const winC   = 'rgba(240,178,78,'+(o.transparent?0.38:0.6)+')';
+
+  /* periodic hills */
+  if (d.nature >= 4){
+    const amp = 6 + d.nature*2.6, base = H*.66;
+    const k1 = 1+Math.floor(rnd()*2), k2 = 2+Math.floor(rnd()*3);
+    const p1 = rnd()*6.28, p2 = rnd()*6.28;
+    x.fillStyle = hillC;
+    x.beginPath(); x.moveTo(0,H);
+    for (let px=0; px<=cv.width; px+=8){
+      const t = px/P*6.28318;
+      x.lineTo(px, base - amp*Math.sin(t*k1+p1)*.7 - amp*Math.sin(t*k2+p2)*.3);
+    }
+    x.lineTo(cv.width,H); x.closePath(); x.fill();
+  }
+
+  /* buildings — two silhouetted rows */
+  const fronts = [];
+  const nb = Math.round(7 + d.scale*1.5);
+  x.fillStyle = backC;
+  for (let i=0;i<nb;i++){
+    const bx = rnd()*P, bw = 26+rnd()*46;
+    const bh = (H*.16) + (H*.05)*d.scale*(0.35+rnd()*0.65)*.8;
+    offs.forEach(off=> x.fillRect(bx+off, H-bh-8, bw, bh));
+  }
+  const nf = Math.round(5 + d.scale*1.2);
+  for (let i=0;i<nf;i++){
+    const bx = rnd()*P, bw = 22+rnd()*40;
+    const bh = (H*.12) + (H*.055)*d.scale*(0.3+rnd()*0.7);
+    fronts.push([bx,bw,bh]);
+  }
+  x.fillStyle = frontC;
+  fronts.forEach(([bx,bw,bh])=> offs.forEach(off=> x.fillRect(bx+off, H-bh-4, bw, bh)));
+
+  /* one landmark for culture-rich skylines */
+  if (d.culture >= 8){
+    const lx = 40+rnd()*(P-80), kind = rnd();
+    x.fillStyle = frontC;
+    offs.forEach(off=>{
+      if (kind < .5){ /* spire */
+        const bh = H*.55;
+        x.fillRect(lx+off-4, H-bh-4, 8, bh);
+        x.beginPath();
+        x.moveTo(lx+off-7, H-bh-4); x.lineTo(lx+off, H-bh-26); x.lineTo(lx+off+7, H-bh-4);
+        x.closePath(); x.fill();
+      } else { /* dome */
+        const bh = H*.34, r = 15;
+        x.fillRect(lx+off-r, H-bh-4, r*2, bh);
+        x.beginPath(); x.arc(lx+off, H-bh-4, r, Math.PI, 0); x.fill();
+        x.fillRect(lx+off-1.5, H-bh-4-r-8, 3, 8);
+      }
+    });
+  }
+
+  /* lit windows on the front row */
+  x.fillStyle = winC;
+  fronts.forEach(([bx,bw,bh])=>{
+    const rows = Math.floor(bh/13), cols = Math.floor(bw/11);
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
+      if (rnd() < .3){
+        const wx = bx+6+c*11, wy = H-bh-4+7+r*13;
+        offs.forEach(off=> x.fillRect(wx+off, wy, 3.2, 4.6));
+      }
+    }
+  });
+
+  /* trees along the ground */
+  if (d.nature >= 6){
+    x.fillStyle = treeC;
+    const nt = 6+Math.round(d.nature*1.4);
+    for (let i=0;i<nt;i++){
+      const tx = rnd()*P, tr = 4+rnd()*8;
+      offs.forEach(off=>{ x.beginPath(); x.arc(tx+off, H-7-tr*.4, tr, 0, 7); x.fill(); });
+    }
+  }
+
+  /* ground line */
+  x.fillStyle = o.transparent ? rgba(inkC,.25) : '#08121A';
+  x.fillRect(0, H-6, cv.width, 6);
+}
+
+/* hero horizon — a "Beacon" city of its own, silhouette only */
+function drawHero(){
+  const cv = $('hero-canvas');
+  drawCitySky(cv, {name:'Beacon', d:{pace:5,nature:7,culture:8,social:5,warmth:5,afford:5,food:5,transit:5,openness:5,scale:6}},
+    {transparent:true, P:1200, H:130, copies:3});
+}
+drawHero();
+try{
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawHero);
+}catch(e){}
+
+/* ================= generative music ================= */
+/* A soft, slightly mystical loop: a slow drone pad drifting between
+   chords, and pentatonic bell tones falling through a long echo. */
+
+let AC = null, master = null, bellBus = null, muted = store.get('beacon-muted') === '1';
+let padOscs = [], chordStep = 0, bellTimer = null, chordTimer = null;
+let padSwell = null;
+const BELL_SCALE = [293.66, 349.23, 392.00, 440.00, 523.25, 587.33, 698.46, 880.00]; /* D min pentatonic */
+const CHORDS = [[73.42,110.00],[65.41,98.00],[87.31,130.81]]; /* D+A, C+G, F+C */
+
+function startAudio(){
+  if (AC) { if (AC.state==='suspended') AC.resume(); return; }
+  AC = new (window.AudioContext||window.webkitAudioContext)();
+
+  const comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -28; comp.ratio.value = 6;
+  comp.connect(AC.destination);
+
+  master = AC.createGain();
+  master.gain.value = muted ? 0 : 1;
+  master.connect(comp);
+
+  /* echo network for the bells */
+  bellBus = AC.createGain(); bellBus.gain.value = 1;
+  const delay = AC.createDelay(2); delay.delayTime.value = .48;
+  const fb = AC.createGain(); fb.gain.value = .32;
+  const tone = AC.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 1400;
+  bellBus.connect(master);
+  bellBus.connect(delay); delay.connect(tone); tone.connect(fb); fb.connect(delay);
+  tone.connect(master);
+
+  /* drone pad */
+  const padFilter = AC.createBiquadFilter();
+  padFilter.type = 'lowpass'; padFilter.frequency.value = 320; padFilter.Q.value = .4;
+  const padGain = AC.createGain(); padGain.gain.value = 0;
+  padFilter.connect(padGain); padGain.connect(master);
+  padGain.gain.linearRampToValueAtTime(.05, AC.currentTime + 6);   /* slow fade in */
+  padSwell = padGain;
+
+  CHORDS[0].forEach(f=>{
+    [-4, 4].forEach(det=>{
+      const osc = AC.createOscillator();
+      osc.type = 'triangle'; osc.frequency.value = f; osc.detune.value = det;
+      const g = AC.createGain(); g.gain.value = .5;
+      osc.connect(g); g.connect(padFilter);
+      osc.start();
+      padOscs.push(osc);
+    });
+  });
+
+  /* the filter breathes */
+  const lfo = AC.createOscillator(); lfo.frequency.value = .045;
+  const lfoG = AC.createGain(); lfoG.gain.value = 110;
+  lfo.connect(lfoG); lfoG.connect(padFilter.frequency);
+  lfo.start();
+
+  /* slow chord drift */
+  chordTimer = setInterval(()=>{
+    chordStep = (chordStep+1) % CHORDS.length;
+    const chord = CHORDS[chordStep];
+    padOscs.forEach((osc,i)=>{
+      const f = chord[Math.floor(i/2) % chord.length];
+      osc.frequency.exponentialRampToValueAtTime(f, AC.currentTime + 7);
+    });
+  }, 26000);
+
+  scheduleBell();
+}
+
+function playBell(){
+  const t = AC.currentTime;
+  const f = BELL_SCALE[Math.floor(Math.random()*BELL_SCALE.length)];
+  const vol = .045 + Math.random()*.07;
+  const dur = 3.5 + Math.random()*1.5;
+
+  const pan = AC.createStereoPanner ? AC.createStereoPanner() : null;
+  const out = pan || bellBus;
+  if (pan){ pan.pan.value = (Math.random()*1.2)-.6; pan.connect(bellBus); }
+
+  const g = AC.createGain();
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+.04);
+  g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+  g.connect(out);
+
+  const o1 = AC.createOscillator(); o1.type='sine'; o1.frequency.value = f;
+  o1.connect(g); o1.start(t); o1.stop(t+dur+.1);
+
+  /* a faint inharmonic partial gives it the bell shimmer */
+  const g2 = AC.createGain();
+  g2.gain.setValueAtTime(.0001, t);
+  g2.gain.exponentialRampToValueAtTime(vol*.22, t+.02);
+  g2.gain.exponentialRampToValueAtTime(.0001, t+dur*.6);
+  g2.connect(out);
+  const o2 = AC.createOscillator(); o2.type='sine'; o2.frequency.value = f*2.76;
+  o2.connect(g2); o2.start(t); o2.stop(t+dur);
+
+  /* occasionally answer with a consonant second note */
+  if (Math.random() < .22){
+    setTimeout(()=>{ if (AC && !muted) playBell(); }, 340);
+  }
+}
+
+function scheduleBell(){
+  bellTimer = setTimeout(()=>{
+    if (AC && !muted) playBell();
+    scheduleBell();
+  }, 2200 + Math.random()*3200);
+}
+
+/* ---------- reactive UI sound ---------- */
+
+function tone(freq, dur, vol, delay, type, dest){
+  if (!AC || muted) return;
+  const t = AC.currentTime + (delay||0);
+  const g = AC.createGain();
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+.015);
+  g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+  g.connect(dest || bellBus);
+  const o = AC.createOscillator();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  o.connect(g); o.start(t); o.stop(t+dur+.05);
+}
+function swish(vol){
+  if (!AC || muted) return;
+  const t = AC.currentTime, dur = .45;
+  const buf = AC.createBuffer(1, Math.floor(AC.sampleRate*dur), AC.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i=0;i<ch.length;i++) ch[i] = (Math.random()*2-1) * (1 - i/ch.length);
+  const s = AC.createBufferSource(); s.buffer = buf;
+  const bp = AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=760; bp.Q.value=.8;
+  const g = AC.createGain(); g.gain.value = vol || .05;
+  s.connect(bp); bp.connect(g); g.connect(master);
+  s.start(t);
+}
+let lastSlideT = 0;
+const SFX = {
+  pick(){ tone(659.26, 1.2, .05); },                                   /* choosing a card: a small bright answer */
+  next(){ tone(146.83, .9, .06, 0, 'triangle', master); },             /* moving on: a low, felt step */
+  slide(){ const n = Date.now(); if (n - lastSlideT > 90){ lastSlideT = n; tone(880, .22, .016, 0, 'sine', master); } },
+  save(){ tone(587.33, 1.4, .06); tone(880, 1.6, .05, .13); },         /* into the lantern: two notes rising */
+  unsave(){ tone(587.33, 1.1, .05); tone(440, 1.3, .045, .13); },      /* out again: two notes falling */
+  drawer(){ swish(.05); },
+  reveal(){                                                            /* the city arrives: a pentatonic cascade over a pad swell */
+    [293.66, 392, 440, 587.33, 880].forEach((f,i)=> tone(f, 3.2, .075, .5 + i*.22));
+    if (padSwell && AC){
+      const t = AC.currentTime;
+      padSwell.gain.cancelScheduledValues(t);
+      padSwell.gain.setValueAtTime(padSwell.gain.value, t);
+      padSwell.gain.linearRampToValueAtTime(.1, t+1.4);
+      padSwell.gain.linearRampToValueAtTime(.05, t+5);
+    }
+  },
+};
+
+function setMuted(m){
+  muted = m;
+  store.set('beacon-muted', m ? '1' : '0');
+  if (master){
+    const t = AC.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.linearRampToValueAtTime(m ? 0 : 1, t + 1.2);
+  }
+  drawSoundIcon();
+}
+
+function drawSoundIcon(){
+  $('sound-fab').innerHTML =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+
+    '<path d="M9 17.5V6.8l9-2.3v10.7"/>'+
+    '<circle cx="6.8" cy="17.5" r="2.2"/>'+
+    '<circle cx="15.8" cy="15.2" r="2.2"/>'+
+    (muted ? '<line x1="3.5" y1="3.5" x2="20.5" y2="20.5"/>' : '')+
+    '</svg>';
+  $('sound-fab').title = muted ? 'Music is off' : 'Music is on';
+}
+drawSoundIcon();
+
+$('sound-fab').onclick = ()=>{
+  if (!AC && muted){ setMuted(false); startAudio(); return; }
+  if (!AC){ startAudio(); setMuted(true); return; }
+  setMuted(!muted);
+};
+
+/* ================= lantern (saved jobs) ================= */
+
+let saved = [], savedHomes = [];
+try{ saved = JSON.parse(store.get('beacon-lantern')||'[]'); }catch(e){ saved = []; }
+try{ savedHomes = JSON.parse(store.get('beacon-homes')||'[]'); }catch(e){ savedHomes = []; }
+if (!Array.isArray(saved)) saved = [];
+if (!Array.isArray(savedHomes)) savedHomes = [];
+
+/* ---------- profiles (the Beacon book) ----------
+   Cloud persistence rides the artifact capability: the page saves
+   data/beacon-state.json as a new version of itself. Outside claude.ai
+   (localhost, saved file) claude.use resolves null and everything
+   falls back to this browser's localStorage. */
+let AF = null;                 /* artifact capability namespace, or null */
+let BOOK = {v:1, profiles:{}};
+let activeProfile = store.get('beacon-profile') || null;
+let syncState = 'local';       /* local | cloud | saving | readonly */
+let bookLoaded = false;
+
+function setSyncChip(){
+  const chip = $('sync-chip');
+  if (!chip) return;
+  const label = {local:'this device', cloud:'saved to the beacon', saving:'saving…', readonly:'read-only here'}[syncState];
+  chip.textContent = label;
+  chip.classList.toggle('on', syncState==='cloud' || syncState==='saving');
+}
+
+function adoptProfile(name){
+  const p = BOOK.profiles[name];
+  if (!p) return;
+  activeProfile = name;
+  store.set('beacon-profile', name);
+  saved = Array.isArray(p.jobs) ? p.jobs : [];
+  savedHomes = Array.isArray(p.homes) ? p.homes : [];
+  updateBadge(); syncHearts();
+}
+
+let bookTimer = null;
+function persistBook(){
+  if (activeProfile && BOOK.profiles[activeProfile]){
+    const p = BOOK.profiles[activeProfile];
+    p.jobs = saved; p.homes = savedHomes;
+    p.updated = new Date().toISOString();
+  }
+  store.set('beacon-book', JSON.stringify(BOOK));
+  if (!AF || !activeProfile) return;
+  clearTimeout(bookTimer);
+  syncState = 'saving'; setSyncChip();
+  bookTimer = setTimeout(()=>{
+    AF.publish({'data/beacon-state.json': JSON.stringify(BOOK)})
+      .then(()=>{ syncState = 'cloud'; setSyncChip(); })
+      .catch(err=>{
+        const code = err && err.code;
+        if (code === 'conflict') return;             /* the reload delivers the new truth */
+        if (code === 'not_writer' || code === 'not_granted' ||
+            code === 'capability_disabled' || code === 'capability_removed' ||
+            code === 'not_declared'){ AF = null; syncState = 'readonly'; }
+        else syncState = 'local';
+        setSyncChip();
+      });
+  }, 1500);
+}
+
+function snapshotMatches(){
+  if (!activeProfile || !BOOK.profiles[activeProfile] || !matches.length) return;
+  BOOK.profiles[activeProfile].matches = matches.map(m=>({name:m.city.name, score:m.score}));
+  BOOK.profiles[activeProfile].answers = answers;
+  persistBook();
+}
+
+function renderProfiles(){
+  const body = $('prof-body');
+  let html = '';
+  if (activeProfile){
+    const p = BOOK.profiles[activeProfile] || {};
+    const last = (p.matches && p.matches.length)
+      ? 'last search: ' + p.matches[0].name + ' ' + p.matches[0].score + '%' : 'no search saved yet';
+    html += '<div class="prof-active"><div><b>'+activeProfile+'</b>'+
+      '<div style="font-size:.75rem;color:var(--ink-soft)">'+last+'</div></div>'+
+      '<button class="ghost" id="prof-signout">set down</button></div>';
+  }
+  const others = Object.keys(BOOK.profiles).filter(n=>n!==activeProfile);
+  html += others.map(n=>{
+    const p = BOOK.profiles[n];
+    const counts = ((p.jobs||[]).length) + ' jobs · ' + ((p.homes||[]).length) + ' homes';
+    return '<div class="prof-row" data-p="'+n.replace(/"/g,'&quot;')+'">'+
+      '<span class="pn">'+n+'<small>'+counts+'</small></span>'+
+      '<span class="open-btn">pick up &rarr;</span></div>';
+  }).join('');
+  if (!activeProfile && !others.length){
+    html += '<p style="font-family:Newsreader,serif;font-style:italic;color:var(--ink-faint);text-align:center;padding:.8rem 0">No one has lit a lantern here yet.</p>';
+  }
+  body.innerHTML = html;
+  body.querySelectorAll('.prof-row').forEach(el=>{
+    el.onclick = ()=>{ adoptProfile(el.dataset.p); renderProfiles(); toast('Welcome back, '+el.dataset.p); };
+  });
+  const out = $('prof-signout');
+  if (out) out.onclick = ()=>{
+    persistBook();
+    activeProfile = null; store.set('beacon-profile','');
+    try{ saved = JSON.parse(store.get('beacon-lantern')||'[]'); }catch(e){ saved = []; }
+    try{ savedHomes = JSON.parse(store.get('beacon-homes')||'[]'); }catch(e){ savedHomes = []; }
+    updateBadge(); syncHearts(); renderProfiles();
+  };
+}
+
+function initBook(){
+  try{ const local = JSON.parse(store.get('beacon-book')||'null'); if (local && local.profiles) BOOK = local; }catch(e){}
+  const arm = ()=>{ bookLoaded = true; if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile); setSyncChip(); };
+  if (!(window.claude && window.claude.use)){ arm(); return; }
+  window.claude.use('artifact').then(a=>{
+    AF = a;
+    if (!AF){ arm(); return; }
+    fetch('data/beacon-state.json')
+      .then(r=> r.ok ? r.json() : null)
+      .then(cloud=>{
+        if (cloud && cloud.profiles) BOOK = cloud;
+        syncState = 'cloud'; arm();
+      })
+      .catch(()=>{ syncState = 'cloud'; arm(); });
+  }).catch(arm);
+}
+initBook();
+
+const jobId = (cityName, role, co)=> cityName+'|'+role+'|'+co;
+
+function persistLantern(){
+  if (!activeProfile){
+    store.set('beacon-lantern', JSON.stringify(saved));
+    store.set('beacon-homes', JSON.stringify(savedHomes));
+  }
+  persistBook();
+}
+
+function updateBadge(pop){
+  const b = $('lantern-badge');
+  const n = saved.length + savedHomes.length;
+  b.textContent = n;
+  b.classList.toggle('show', n>0);
+  if (pop){ b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+}
+
+function renderLantern(){
+  const list = $('lantern-list');
+  if (!saved.length && !savedHomes.length){
+    list.innerHTML = '<p class="lantern-empty">Nothing glowing in here yet.<br>Save a job or a home and it will wait for you, lit.</p>';
+    return;
+  }
+  const section = (title, items, line1, line2)=>{
+    if (!items.length) return '';
+    const groups = {};
+    items.forEach(s=>{ (groups[s.city] = groups[s.city]||[]).push(s); });
+    return '<div class="lgroup" style="letter-spacing:.22em;color:var(--amber)">'+title+'</div>'+
+      Object.keys(groups).map(cityName=>
+        '<div class="lgroup">'+cityName+'</div>'+
+        groups[cityName].map(s=>
+          '<div class="litem"><div><h5>'+line1(s)+'</h5>'+
+          '<div class="sub">'+line2(s)+'</div></div>'+
+          '<button class="ghost" data-id="'+s.id.replace(/"/g,'&quot;')+'" aria-label="Remove">&#10005;</button></div>'
+        ).join('')
+      ).join('');
+  };
+  list.innerHTML =
+    section('Jobs', saved, s=>s.role, s=>s.co+' · '+s.mode+' · '+s.pay) +
+    section('Homes', savedHomes, s=>s.title, s=>s.hood+' · '+s.rent+' · '+s.size);
+  list.querySelectorAll('.ghost').forEach(btn=>{
+    btn.onclick = ()=>{
+      saved = saved.filter(s=>s.id !== btn.dataset.id);
+      savedHomes = savedHomes.filter(s=>s.id !== btn.dataset.id);
+      persistLantern(); updateBadge(); renderLantern(); syncHearts();
+    };
+  });
+}
+
+function openDrawer(){ SFX.drawer(); renderLantern(); $('drawer').classList.add('open'); $('scrim').classList.add('open'); }
+function closeDrawer(){ $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); }
+$('lantern-fab').onclick = openDrawer;
+$('drawer-close').onclick = closeDrawer;
+$('scrim').onclick = closeDrawer;
+updateBadge();
+
+function syncHearts(){
+  document.querySelectorAll('#job-list .save, #home-list .save').forEach(btn=>{
+    const on = saved.some(s=>s.id === btn.dataset.id) || savedHomes.some(s=>s.id === btn.dataset.id);
+    btn.classList.toggle('on', on);
+    btn.innerHTML = on ? '&#9829;' : '&#9825;';
+    btn.setAttribute('aria-pressed', on);
+  });
+}
+
+/* ================= quiz rendering ================= */
+
+function renderQuestion(){
+  const q = QUESTIONS[qIndex];
+  $('prog-count').textContent = (qIndex+1) + ' / ' + QUESTIONS.length;
+  $('prog-fill').style.width = ((qIndex+1)/QUESTIONS.length*100) + '%';
+  $('q-back').style.visibility = qIndex === 0 ? 'hidden' : 'visible';
+
+  const holder = $('q-holder');
+  holder.style.animation = 'none';
+  void holder.offsetWidth;
+  holder.style.animation = 'rise .55s cubic-bezier(.22,.8,.3,1) both';
+
+  let html = '<h2 class="q-title">' + q.title + '</h2><div class="q-body">';
+
+  if (q.type === 'cards'){
+    html += '<div class="opts">';
+    q.opts.forEach((o,i)=>{
+      const picked = answers[q.key] === i ? ' picked' : '';
+      html += '<button class="opt'+picked+'" data-i="'+i+'">'+o.t+'<small>'+o.s+'</small></button>';
+    });
+    html += '</div>';
+  } else if (q.type === 'slider'){
+    const v = answers[q.key] ?? 5;
+    html += '<div class="slider-wrap"><div class="slider-labels"><span>'+q.left+'</span><span>'+q.right+'</span></div>'
+          + '<input type="range" min="0" max="10" step="1" value="'+v+'" id="q-slider" aria-label="'+q.title+'"></div>';
+  } else if (q.type === 'multichips'){
+    html += '<div class="chips">';
+    q.opts.forEach(o=>{
+      const v = o.toLowerCase();
+      const picked = (answers[q.key]||[]).includes(v) ? ' picked' : '';
+      html += '<button class="chip'+picked+'" data-v="'+v+'">'+o+'</button>';
+    });
+    html += '</div><p class="q-hint" style="margin-top:1.1rem">pick as many as you like</p>';
+  } else if (q.type === 'chips'){
+    html += '<div class="chips">';
+    FIELDS.forEach(f=>{
+      const picked = answers[q.key] === f.id ? ' picked' : '';
+      html += '<button class="chip'+picked+'" data-f="'+f.id+'">'+f.label+'</button>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  holder.innerHTML = html;
+
+  if (q.type === 'cards'){
+    holder.querySelectorAll('.opt').forEach(btn=>{
+      btn.onclick = ()=>{
+        holder.querySelectorAll('.opt').forEach(b=>b.classList.remove('picked'));
+        btn.classList.add('picked');
+        answers[q.key] = +btn.dataset.i;
+        SFX.pick();
+        $('q-next').disabled = false;
+      };
+    });
+  } else if (q.type === 'slider'){
+    answers[q.key] = answers[q.key] ?? 5;
+    $('q-slider').oninput = e => { answers[q.key] = +e.target.value; SFX.slide(); };
+    $('q-next').disabled = false;
+  } else if (q.type === 'multichips'){
+    holder.querySelectorAll('.chip').forEach(btn=>{
+      btn.onclick = ()=>{
+        const arr = answers[q.key] = answers[q.key] || [];
+        const v = btn.dataset.v;
+        const i = arr.indexOf(v);
+        if (i >= 0){ arr.splice(i,1); btn.classList.remove('picked'); }
+        else { arr.push(v); btn.classList.add('picked'); SFX.pick(); }
+        $('q-next').disabled = arr.length === 0;
+      };
+    });
+  } else if (q.type === 'chips'){
+    holder.querySelectorAll('.chip').forEach(btn=>{
+      btn.onclick = ()=>{
+        holder.querySelectorAll('.chip').forEach(b=>b.classList.remove('picked'));
+        btn.classList.add('picked');
+        answers[q.key] = btn.dataset.f;
+        SFX.pick();
+        $('q-next').disabled = false;
+      };
+    });
+  }
+
+  const a0 = answers[q.key];
+  $('q-next').disabled = a0 === undefined || (Array.isArray(a0) && a0.length === 0);
+  $('q-next').textContent = qIndex === QUESTIONS.length-1 ? 'light the beacon' : 'continue';
+}
+
+/* ================= matching ================= */
+
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+
+function computeUser(){
+  DIMS.forEach(k=>user[k]=5);
+  /* pass 1 — sliders set the base */
+  QUESTIONS.forEach(q=>{
+    const a = answers[q.key];
+    if (q.type === 'slider' && a !== undefined){
+      if (q.key === 'budget'){ user.tol = a; user.afford = clamp(10 - a, 0, 10); }
+      else user[q.dim] = a;
+    }
+  });
+  /* pass 2 — card choices refine it */
+  QUESTIONS.forEach(q=>{
+    const a = answers[q.key];
+    if (q.type === 'cards' && a !== undefined){
+      const fx = q.opts[a].fx || {};
+      for (const k in fx) user[k] = clamp(user[k] + fx[k]*0.7, 0, 10);
+    }
+  });
+  /* capability & tradeoff answers (not preference dims) */
+  user.tol = user.tol ?? 5;
+  user.langs = (answers.languages && answers.languages.length) ? answers.languages : ['english'];
+  user.learn = [9,6,3,0][answers.langlearn ?? 1];
+  user.trade = ['culture','cheap','nature','none'][answers.safetrade ?? 3];
+  user.qolDims = [['transit','safe'],['food','culture'],['nature','transit'],null][answers.worthit ?? 0];
+}
+
+const DIM_LABELS = {
+  pace:'Pace of life', nature:'Nature', culture:'Culture', social:'Social scene',
+  warmth:'Climate', afford:'Cost of living', food:'Food scene',
+  transit:'Getting around', openness:'Ease of arriving', scale:'City size',
+  safe:'Safety', div:'Diversity', lang:'Language ease'
+};
+const WEIGHTS = {
+  pace:1.15, nature:1, culture:1, social:1, warmth:1.05,
+  food:.9, transit:.9, openness:.8, scale:1.05
+};
+
+/* language: capability, not preference — shared language is full credit,
+   English-friendliness partial, otherwise willingness-to-learn carries it */
+function langFit(c){
+  if (c.langs.some(l=>user.langs.includes(l))) return 1;
+  if (c.eng && user.langs.includes('english')) return .8 + .02*user.learn;
+  return .3 + .06*user.learn;
+}
+/* cost: asymmetric — cheaper than your comfort is never penalized, and
+   pricier is only forgiven where the cost buys the quality YOU named */
+function costFit(c){
+  const tol = 2 + .8*user.tol;
+  if (c.cost <= tol) return 1;
+  const excess = c.cost - tol;
+  const qol = user.qolDims ? (c.d[user.qolDims[0]] + c.d[user.qolDims[1]])/20 : 0;
+  return clamp(1 - excess * .13 * (1.35 - .85*qol), 0, 1);
+}
+/* safety: one-sided requirement, softened when the city offers the
+   specific tradeoff this person said makes a rougher edge worth it */
+function safeFit(c){
+  const gap = Math.max(0, user.safe * .9 - c.d.safe);
+  let forgive = 0;
+  if (user.trade === 'culture' && (c.d.culture + c.d.food)/2 >= 7.5) forgive = .45;
+  if (user.trade === 'cheap'   && c.cost <= 3) forgive = .45;
+  if (user.trade === 'nature'  && c.d.nature >= 8) forgive = .45;
+  return clamp(1 - (gap/10) * 1.3 * (1 - forgive), 0, 1);
+}
+/* diversity: one-sided care — wanting it favors mixed cities, not caring is neutral */
+function divFit(c){
+  const gap = Math.max(0, user.div - c.d.div);
+  return clamp(1 - (gap/10) * 1.1, 0, 1);
+}
+
+function scoreCity(c){
+  let sum = 0, wsum = 0;
+  const fits = {};
+  for (const k in WEIGHTS){
+    const fit = 1 - Math.abs(c.d[k] - user[k])/10;
+    fits[k] = Math.round(fit*100);
+    sum += fit * WEIGHTS[k];
+    wsum += WEIGHTS[k];
+  }
+  const extras = [
+    ['lang',   langFit(c), 1.2],
+    ['afford', costFit(c), 1.15],
+    ['safe',   safeFit(c), .7 + .06*user.safe],
+    ['div',    divFit(c), .3 + .07*user.div],
+  ];
+  for (const [k,f,w] of extras){
+    fits[k] = Math.round(f*100);
+    sum += f*w; wsum += w;
+  }
+  let raw = Math.pow(sum/wsum, 2.1) * 100;
+  if (answers.field && c.ind.includes(answers.field)) raw += 6;
+  /* raw drives the ranking; the rounded score is only for display */
+  return {city:c, raw, score:clamp(Math.round(raw),1,99), fits};
+}
+
+const CONTINENT_OF = {
+  'United States':'North America','Canada':'North America','Mexico':'North America',
+  'Costa Rica':'North America','Panama':'North America','Puerto Rico':'North America',
+  'Dominican Republic':'North America',
+  'Chile':'South America','Peru':'South America','Colombia':'South America',
+  'Uruguay':'South America','Brazil':'South America','Argentina':'South America',
+  'Portugal':'Europe','Spain':'Europe','France':'Europe','Belgium':'Europe',
+  'Netherlands':'Europe','Germany':'Europe','Switzerland':'Europe','Italy':'Europe',
+  'Sweden':'Europe','Norway':'Europe','Finland':'Europe','Iceland':'Europe',
+  'Ireland':'Europe','Scotland':'Europe','United Kingdom':'Europe','Poland':'Europe',
+  'Hungary':'Europe','Romania':'Europe','Serbia':'Europe','Croatia':'Europe',
+  'Slovenia':'Europe','Greece':'Europe','Estonia':'Europe','Latvia':'Europe',
+  'Lithuania':'Europe','Malta':'Europe','Denmark':'Europe','Austria':'Europe','Czechia':'Europe',
+  'Morocco':'Africa','Ghana':'Africa','Nigeria':'Africa','Kenya':'Africa',
+  'Rwanda':'Africa','South Africa':'Africa','Egypt':'Africa',
+  'Israel':'Asia','Qatar':'Asia','United Arab Emirates':'Asia','Oman':'Asia',
+  'Japan':'Asia','South Korea':'Asia','China':'Asia','Hong Kong':'Asia',
+  'Vietnam':'Asia','Cambodia':'Asia','Malaysia':'Asia','Indonesia':'Asia',
+  'Philippines':'Asia','India':'Asia','Sri Lanka':'Asia','Nepal':'Asia',
+  'Kazakhstan':'Asia','Thailand':'Asia','Taiwan':'Asia','Singapore':'Asia',
+  'Turkey':'Asia','Georgia':'Asia',
+  'Australia':'Oceania','New Zealand':'Oceania',
+};
+const CONTS = ['North America','South America','Europe','Africa','Asia','Oceania'];
+
+function renderContinents(){
+  const grid = $('cont-grid');
+  grid.innerHTML = CONTS.map(cont=>{
+    const rows = ranked.filter(r=>CONTINENT_OF[r.city.country]===cont).slice(0,3);
+    return '<div class="cont-card"><h4>'+cont+'</h4>'+rows.map(r=>
+      '<div class="cont-row" data-city="'+r.city.name.replace(/"/g,'&quot;')+'" role="button" tabindex="0">'+
+      '<span class="nm">'+r.city.name+'<small>'+r.city.country+'</small></span>'+
+      '<span class="pc">'+r.score+'%</span></div>').join('')+'</div>';
+  }).join('');
+  grid.querySelectorAll('.cont-row').forEach(el=>{
+    const open = ()=>{ const c = CITIES.find(x=>x.name===el.dataset.city); if (c) showJobs(c); };
+    el.onclick = open;
+    el.onkeydown = e=>{ if (e.key==='Enter') open(); };
+  });
+}
+
+function runMatch(){
+  computeUser();
+  ranked = CITIES.map(scoreCity)
+    .sort((a,b)=> b.raw - a.raw || a.city.name.localeCompare(b.city.name));
+  matches = ranked.slice(0,3);
+  renderResults();
+  snapshotMatches();
+  playReveal();
+}
+
+/* ---------- the reveal ---------- */
+
+let revealTimer = null;
+function playReveal(){
+  const R = $('reveal'), c = matches[0].city;
+  $('reveal-name').textContent = c.name;
+  $('reveal-sub').textContent = matches[0].score + '% match · ' + c.country;
+  const cv = $('reveal-canvas');
+  const h = Math.max(170, Math.round(innerHeight * .38));
+  drawCitySky(cv, c, {P:1200, H:h, copies:3});
+  cv.style.height = h + 'px';
+  R.classList.add('on');
+  SFX.reveal();
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  revealTimer = setTimeout(endReveal, reduced ? 1400 : 4600);
+}
+function endReveal(){
+  clearTimeout(revealTimer);
+  const R = $('reveal');
+  if (!R.classList.contains('on')) return;
+  R.classList.remove('on');
+  go('view-results');
+}
+
+function renderResults(){
+  $('top-city-script').textContent = matches[0].city.name;
+  const list = $('match-list');
+  list.innerHTML = matches.map((m,idx)=>{
+    const c = m.city;
+    const bestDims = Object.entries(m.fits).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const bars = bestDims.map(([k,v])=>
+      '<div class="fitbar"><div class="lbl"><span>'+DIM_LABELS[k]+'</span><span>'+v+'%</span></div>'+
+      '<div class="rail"><i data-w="'+v+'"></i></div></div>').join('');
+    const fieldNote = (answers.field && c.ind.includes(answers.field))
+      ? ' <strong style="color:var(--amber);font-style:normal;font-family:Karla,sans-serif;font-size:.8rem;letter-spacing:.06em;">&#9679; strong for your field</strong>' : '';
+    return '<article class="match">'+
+      '<div class="strip"><canvas class="city-sky" data-city="'+idx+'" height="150" style="animation-duration:'+(62+idx*9)+'s"></canvas></div>'+
+      '<div class="match-body">'+
+      '<div class="match-top"><h3 class="match-name">'+c.name+'<small>'+c.country+'</small></h3>'+
+      '<div class="match-pct">'+m.score+'<small> % match</small></div></div>'+
+      '<p class="match-why">'+c.why+fieldNote+'</p>'+
+      '<div class="fitbars">'+bars+'</div>'+
+      '<button class="jobs-btn" data-city="'+idx+'">See jobs in '+c.name+' &rarr;</button> '+
+      '<button class="jobs-btn homes-link" data-city="'+idx+'">Find a home &rarr;</button>'+
+      '</div></article>';
+  }).join('');
+
+  list.querySelectorAll('.city-sky').forEach(cv=>{
+    drawCitySky(cv, matches[+cv.dataset.city].city);
+  });
+
+  renderContinents();
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    list.querySelectorAll('.rail i').forEach(el=>{ el.style.width = el.dataset.w+'%'; });
+  }));
+
+  list.querySelectorAll('.jobs-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      const c = matches[+btn.dataset.city].city;
+      btn.classList.contains('homes-link') ? showHomes(c) : showJobs(c);
+    };
+  });
+}
+
+/* ================= compare ================= */
+
+function fillCompareSelects(){
+  const opts = ranked.map((r,i)=>'<option value="'+i+'">'+r.city.name+' · '+r.score+'%</option>').join('');
+  $('cmp-a').innerHTML = opts;
+  $('cmp-b').innerHTML = opts;
+  $('cmp-a').value = 0;
+  $('cmp-b').value = 1;
+}
+
+function renderCompare(){
+  const A = ranked[+$('cmp-a').value], B = ranked[+$('cmp-b').value];
+  $('cmp-fit-a').innerHTML = A.score + '% <small>match for you</small>';
+  $('cmp-fit-b').innerHTML = B.score + '% <small>match for you</small>';
+
+  $('cmp-dims').innerHTML = DIMS.map(k=>{
+    const av = A.city.d[k], bv = B.city.d[k];
+    const aCloser = Math.abs(av - user[k]) <= Math.abs(bv - user[k]);
+    return '<div class="cmp-row">'+
+      '<div class="cmp-rail L'+(aCloser?' win':'')+'"><i style="width:'+(av*10)+'%"></i></div>'+
+      '<div class="cmp-mid">'+DIM_LABELS[k]+'</div>'+
+      '<div class="cmp-rail'+(!aCloser?' win':'')+'"><i style="width:'+(bv*10)+'%"></i></div>'+
+      '</div>';
+  }).join('');
+
+  const FACTS = [['pop','Metro population'],['lang','Language'],['rent','One-bed rent · Numbeo'],['sun','Sunshine hours a year']];
+  const fmt = (v,k)=> k==='sun' ? Number(v).toLocaleString('en-US')+' h' : v;
+  $('cmp-facts').innerHTML = FACTS.map(([k,label])=>
+    '<div class="cmp-fact"><div class="v a">'+fmt(A.city.f[k],k)+'</div><div class="k">'+label+'</div><div class="v">'+fmt(B.city.f[k],k)+'</div></div>'
+  ).join('');
+}
+
+/* ================= share card ================= */
+
+const TRAIT_WORDS = {
+  pace:    {hi:'full current', lo:'slow tide'},
+  nature:  {hi:'wild at heart', lo:'city creature'},
+  culture: {hi:'culture-hungry', lo:'simple pleasures'},
+  social:  {hi:'people person', lo:'quiet company'},
+  warmth:  {hi:'sun-seeker', lo:'sweater weather'},
+  afford:  {hi:'travels light', lo:'comfort first'},
+  food:    {hi:'led by appetite', lo:'eats to live'},
+  transit: {hi:'goes on foot', lo:'open road'},
+  openness:{hi:'newcomer at home', lo:'deep roots'},
+  scale:   {hi:'megacity hum', lo:'cozy scale'},
+  safe:    {hi:'sleeps easy', lo:'edge-friendly'},
+  div:     {hi:'world on one street', lo:'close to home'},
+};
+
+function traitWords(){
+  return DIMS.map(k=>({k, dev:Math.abs(user[k]-5)}))
+    .sort((a,b)=>b.dev-a.dev).slice(0,3)
+    .map(o=> user[o.k] >= 5 ? TRAIT_WORDS[o.k].hi : TRAIT_WORDS[o.k].lo);
+}
+
+async function renderShareCard(){
+  await document.fonts.ready;
+  await Promise.all([
+    document.fonts.load('120px Ephesis'),
+    document.fonts.load('italic 300 60px Newsreader'),
+    document.fonts.load('600 26px Karla'),
+  ]);
+
+  const W = 1080, H = 1350;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+
+  const g = x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#101C24'); g.addColorStop(1,'#0A141A');
+  x.fillStyle = g; x.fillRect(0,0,W,H);
+
+  const halo = x.createRadialGradient(W/2, 400, 40, W/2, 400, 520);
+  halo.addColorStop(0,'rgba(240,178,78,.28)');
+  halo.addColorStop(1,'rgba(240,178,78,0)');
+  x.fillStyle = halo; x.fillRect(0,0,W,H);
+
+  x.save();
+  x.globalAlpha = .07;
+  x.translate(W/2, -160); x.rotate(.42);
+  x.fillStyle = '#F5C97E';
+  x.beginPath(); x.moveTo(0,0); x.lineTo(-90,H+400); x.lineTo(90,H+400); x.closePath(); x.fill();
+  x.restore();
+
+  /* the top city's skyline along the card's base */
+  const sk = document.createElement('canvas');
+  drawCitySky(sk, matches[0].city, {P:1080, H:170, copies:1});
+  x.globalAlpha = .9;
+  x.drawImage(sk, 0, H-170);
+  x.globalAlpha = 1;
+
+  x.textAlign = 'center';
+  x.fillStyle = '#6E858D';
+  x.font = '600 26px Karla, sans-serif';
+  try{ x.letterSpacing = '6px'; }catch(e){}
+  x.fillText('THE LIGHT POINTS TOWARD', W/2, 220);
+  try{ x.letterSpacing = '0px'; }catch(e){}
+
+  x.fillStyle = '#F0B24E';
+  x.shadowColor = 'rgba(240,178,78,.8)'; x.shadowBlur = 60;
+  x.font = '150px Ephesis, cursive';
+  x.fillText(matches[0].city.name, W/2, 430);
+  x.shadowBlur = 0;
+
+  x.fillStyle = '#E7EFEE';
+  x.font = 'italic 300 58px Newsreader, serif';
+  x.fillText(matches[0].score + '% match', W/2, 530);
+
+  x.strokeStyle = 'rgba(231,239,238,.18)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(W/2-160, 600); x.lineTo(W/2+160, 600); x.stroke();
+
+  x.font = '600 24px Karla, sans-serif';
+  x.fillStyle = '#6E858D';
+  try{ x.letterSpacing = '5px'; }catch(e){}
+  x.fillText('MY THREE CITIES', W/2, 670);
+  try{ x.letterSpacing = '0px'; }catch(e){}
+  matches.forEach((m,i)=>{
+    const y = 745 + i*76;
+    x.font = 'italic 300 46px Newsreader, serif';
+    x.fillStyle = '#E7EFEE';
+    x.textAlign = 'right';
+    x.fillText(m.city.name, W/2 + 90, y);
+    x.textAlign = 'left';
+    x.fillStyle = '#F0B24E';
+    x.font = 'italic 400 46px Newsreader, serif';
+    x.fillText(m.score + '%', W/2 + 130, y);
+  });
+  x.textAlign = 'center';
+
+  x.fillStyle = '#A7BBC0';
+  x.font = 'italic 300 38px Newsreader, serif';
+  x.fillText(traitWords().join('  ·  '), W/2, 1035);
+
+  x.fillStyle = '#E7EFEE';
+  x.shadowColor = 'rgba(240,178,78,.55)'; x.shadowBlur = 40;
+  x.font = '92px Ephesis, cursive';
+  x.fillText('Beacon', W/2, 1140);
+  x.shadowBlur = 0;
+
+  $('share-img').src = cv.toDataURL('image/png');
+}
+
+function shareText(){
+  return 'My Beacon cities — ' +
+    matches.map((m,i)=>(i+1)+'. '+m.city.name+' '+m.score+'%').join('  ') +
+    '  · ' + traitWords().join(', ') +
+    '  · Beacon: find the city that feels like you';
+}
+
+/* ================= jobs ================= */
+
+function renderJobList(city, items){
+  const list = $('job-list');
+  list.innerHTML = items.map(it=>{
+    const id = jobId(city.name, it.role, it.co);
+    const title = it.url
+      ? '<a href="'+it.url+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">'+it.role+' &nearr;</a>'
+      : it.role;
+    return '<div class="job"><div>'+
+      '<h4>'+title+'</h4><div class="co">'+it.co+' · '+city.name+'</div>'+
+      '<div class="meta"><span class="tag">'+it.mode+'</span><span class="tag pay">'+it.pay+'</span></div></div>'+
+      '<button class="save" data-id="'+id.replace(/"/g,'&quot;')+'" data-role="'+it.role.replace(/"/g,'&quot;')+'" data-co="'+it.co.replace(/"/g,'&quot;')+'" data-mode="'+it.mode+'" data-pay="'+it.pay+'" aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
+  }).join('');
+
+  list.querySelectorAll('.save').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.id;
+      const exists = saved.some(s=>s.id === id);
+      if (exists){
+        saved = saved.filter(s=>s.id !== id);
+        SFX.unsave();
+        toast('Taken out of your lantern');
+      } else {
+        saved.push({id, role:btn.dataset.role, co:btn.dataset.co, city:city.name, mode:btn.dataset.mode, pay:btn.dataset.pay});
+        SFX.save();
+        toast('Saved to your lantern');
+      }
+      persistLantern();
+      updateBadge(!exists);
+      syncHearts();
+    };
+  });
+  syncHearts();
+}
+
+function showJobs(city){
+  currentCity = city;
+  const fieldId = answers.field || 'remote';
+  const field = FIELDS.find(f=>f.id===fieldId);
+  const roles = ROLES[fieldId];
+
+  $('jobs-city').textContent = city.name;
+  $('jobs-sub').textContent = field.label + ' · curated for your search';
+  drawCitySky($('jobs-canvas'), city);
+
+  const spin = city.name.length;              /* per-city rotation, stable forever */
+  const curated = roles.map((_, i)=>({
+    role: roles[(i + spin) % roles.length],
+    co: city.cos[(i + spin) % city.cos.length],
+    mode: MODES[(i + spin) % MODES.length],
+    pay: payBand(city, fieldId, i),
+  }));
+  renderJobList(city, curated);
+  $('jobs-src').textContent = 'generated by formula · pay scaled to local cost of living';
+  go('view-jobs');
+}
+
+/* ================= homes ================= */
+
+const HOME_TYPES = [
+  {t:'Studio',      mult:.72, s:[32,45]},
+  {t:'1-bedroom',   mult:1.0, s:[45,65]},
+  {t:'2-bedroom',   mult:1.38, s:[65,95]},
+  {t:'Loft',        mult:1.15, s:[55,85]},
+  {t:'Small house', mult:1.85, s:[90,140]},
+];
+const HOME_QUIRKS = [
+  'morning light on the kitchen table','a balcony over the lane','five minutes from the water',
+  'bookshelves left by the last tenant','a rooftop shared with three neighbors',
+  'floors that creak in a friendly way','bikes welcome in the hallway','a lemon tree in the courtyard',
+  'windows that open all the way','the good kind of quiet street','market stalls at the corner',
+  'sunset side of the building',
+];
+const PORTALS = {
+  'United States': c=>['Zillow','https://www.zillow.com/homes/'+encodeURIComponent(c.name)+'_rb/'],
+  'Netherlands':   c=>['Funda','https://www.funda.nl/huur/'+slug(c.name)+'/'],
+  'Spain':         c=>['Idealista','https://www.idealista.com/en/alquiler-viviendas/'+slug(c.name)+'/'],
+  'Italy':         c=>['Idealista','https://www.idealista.it/affitto-case/'+slug(c.name)+'/'],
+  'Portugal':      c=>['Idealista','https://www.idealista.pt/arrendar-casas/'+slug(c.name)+'/'],
+  'United Kingdom':c=>['Zoopla','https://www.zoopla.co.uk/to-rent/property/'+slug(c.name)+'/'],
+  'Scotland':      c=>['Zoopla','https://www.zoopla.co.uk/to-rent/property/'+slug(c.name)+'/'],
+};
+function slug(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+function baseRent(city){ return parseInt(String(city.f.rent).replace(/[^0-9]/g,''), 10) || 1000; }
+function hoodsFor(city){
+  const suf = /\s(Studio|Works|Labs|Collective|& Co|Digital|Capital|House|Group|Atelier|Systems|Craft|Kollektiv|& Fils|& Main|& Field|& Pearl)$/;
+  const hs = city.cos.map(c=>c.replace(suf,'').trim()).filter(h=>h.length>2);
+  return hs.length ? [...new Set(hs)] : [city.name];
+}
+function genHomes(city){
+  const rnd = rngFor('homes:'+city.name);
+  const hoods = hoodsFor(city), base = baseRent(city), out = [];
+  for (let i=0;i<8;i++){
+    const ty = HOME_TYPES[Math.floor(rnd()*HOME_TYPES.length)];
+    const rent = Math.round(base*ty.mult*(0.88+rnd()*0.28)/10)*10;
+    const sqm = Math.round(ty.s[0] + rnd()*(ty.s[1]-ty.s[0]));
+    const hood = hoods[Math.floor(rnd()*hoods.length)];
+    out.push({
+      id:'home|'+city.name+'|'+i,
+      city:city.name,
+      title:ty.t+' in '+hood,
+      hood, type:ty.t,
+      rentN:rent, rent:'$'+rent.toLocaleString('en-US')+'/mo',
+      size:sqm+' m²',
+      quirk:HOME_QUIRKS[Math.floor(rnd()*HOME_QUIRKS.length)],
+      furnished:rnd()<.4,
+    });
+  }
+  return out.sort((a,b)=>a.rentN-b.rentN);
+}
+
+let homesCity = null, homesAll = [], homeType = 'All';
+function renderHomeList(){
+  const cap = +$('home-budget').value;
+  const base = baseRent(homesCity);
+  const capRent = Math.round(base*(0.6 + cap*0.16)/10)*10;   /* slider 0..10 → .6x–2.2x market */
+  $('home-bval').textContent = cap===10 ? 'any budget' : '≤ $'+capRent.toLocaleString('en-US');
+  const items = homesAll.filter(h=>
+    (homeType==='All' || h.type===homeType) && (cap===10 || h.rentN<=capRent));
+  const list = $('home-list');
+  if (!items.length){
+    list.innerHTML = '<p class="lantern-empty">Nothing in that shape here — loosen the budget a little.</p>';
+    return;
+  }
+  list.innerHTML = items.map(h=>
+    '<div class="job"><div>'+
+    '<h4>'+h.title+'</h4><div class="co">'+h.quirk+'</div>'+
+    '<div class="meta"><span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
+    (h.furnished?'<span class="tag">furnished</span>':'')+
+    '</div></div><button class="save" data-id="'+h.id+'" aria-label="Save this home" aria-pressed="false">&#9825;</button></div>'
+  ).join('');
+  list.querySelectorAll('.save').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.id;
+      const exists = savedHomes.some(s=>s.id===id);
+      if (exists){
+        savedHomes = savedHomes.filter(s=>s.id!==id);
+        SFX.unsave(); toast('Taken out of your lantern');
+      } else {
+        const h = homesAll.find(x=>x.id===id);
+        savedHomes.push({id:h.id, city:h.city, title:h.title, hood:h.hood, rent:h.rent, size:h.size});
+        SFX.save(); toast('Saved to your lantern');
+      }
+      persistLantern(); updateBadge(!exists); syncHearts();
+    };
+  });
+  syncHearts();
+}
+
+function showHomes(city){
+  homesCity = city; currentCity = city;
+  homesAll = genHomes(city);
+  homeType = 'All';
+  $('homes-city').textContent = city.name;
+  $('homes-sub').textContent = 'a sample of the market · one-bed median $'+baseRent(city).toLocaleString('en-US')+'/mo';
+  drawCitySky($('homes-canvas'), city);
+  $('home-types').innerHTML = ['All', ...HOME_TYPES.map(t=>t.t)].map(t=>
+    '<button class="chip'+(t===homeType?' picked':'')+'" data-t="'+t+'">'+t+'</button>').join('');
+  $('home-types').querySelectorAll('.chip').forEach(btn=>{
+    btn.onclick = ()=>{
+      homeType = btn.dataset.t;
+      $('home-types').querySelectorAll('.chip').forEach(b=>b.classList.toggle('picked', b.dataset.t===homeType));
+      renderHomeList();
+    };
+  });
+  $('home-budget').value = 10;
+  $('home-budget').oninput = renderHomeList;
+  const portal = PORTALS[city.country];
+  let links = '';
+  if (portal){
+    const [label, url] = portal(city);
+    links += '<a class="btn2" style="text-decoration:none" href="'+url+'" target="_blank" rel="noopener">browse '+label+' &nearr;</a>';
+  }
+  links += '<a class="btn2" style="text-decoration:none" href="https://www.google.com/search?q='+
+    encodeURIComponent('apartments for rent in '+city.name+' '+city.country)+'" target="_blank" rel="noopener">search the local market &nearr;</a>';
+  $('portal-row').innerHTML = links;
+  renderHomeList();
+  go('view-homes');
+}
+
+/* ================= misc ================= */
+
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function restart(){
+  answers = {}; qIndex = 0;
+  go('view-hero');
+}
+
+/* ================= wiring ================= */
+
+$('begin').onclick = ()=>{
+  startAudio();            /* gentle music begins with the journey */
+  if (muted) drawSoundIcon();
+  qIndex = 0; renderQuestion(); go('view-quiz');
+};
+$('q-next').onclick = ()=>{
+  SFX.next();
+  if (qIndex < QUESTIONS.length-1){ qIndex++; renderQuestion(); }
+  else runMatch();
+};
+$('q-back').onclick = ()=>{ if (qIndex>0){ qIndex--; renderQuestion(); } };
+$('restart').onclick = restart;
+$('jobs-restart').onclick = restart;
+$('jobs-back').onclick = ()=>go('view-results');
+$('jobs-homes').onclick = ()=>{ if (currentCity) showHomes(currentCity); };
+$('homes-back').onclick = ()=>go('view-results');
+$('homes-jobs').onclick = ()=>{ if (homesCity) showJobs(homesCity); };
+$('prof-fab').onclick = ()=>{ renderProfiles(); setSyncChip(); $('prof-modal').classList.add('on'); };
+$('prof-close').onclick = ()=> $('prof-modal').classList.remove('on');
+$('prof-modal').onclick = e=>{ if (e.target === $('prof-modal')) $('prof-modal').classList.remove('on'); };
+$('prof-create').onclick = ()=>{
+  const name = $('prof-name').value.trim();
+  if (!name) return;
+  if (!BOOK.profiles[name]){
+    /* a new profile carries this device's lantern in with it */
+    BOOK.profiles[name] = {jobs:saved.slice(), homes:savedHomes.slice(), created:new Date().toISOString()};
+  }
+  $('prof-name').value = '';
+  adoptProfile(name);
+  persistBook(); renderProfiles();
+  toast('Lit — your lantern now travels with "'+name+'"');
+};
+
+$('to-compare').onclick = ()=>{ fillCompareSelects(); renderCompare(); go('view-compare'); };
+$('cmp-a').onchange = renderCompare;
+$('cmp-b').onchange = renderCompare;
+$('cmp-back').onclick = ()=>go('view-results');
+
+$('to-share').onclick = ()=>{ renderShareCard(); go('view-share'); };
+$('share-back').onclick = ()=>go('view-results');
+$('copy-text').onclick = async ()=>{
+  try{
+    await navigator.clipboard.writeText(shareText());
+    toast('Copied — paste it anywhere');
+  }catch(e){
+    window.prompt('Copy your Beacon summary:', shareText());
+  }
+};
+
+$('reveal').onclick = endReveal;
+
+$('how-open').onclick = ()=> $('how-modal').classList.add('on');
+$('how-close').onclick = ()=> $('how-modal').classList.remove('on');
+$('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };
+
+document.addEventListener('keydown', e=>{
+  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); }
+  if (e.key === 'Enter' && activeView === 'view-quiz' && !$('q-next').disabled
+      && document.activeElement.tagName !== 'BUTTON'){
+    $('q-next').click();
+  }
+});
+</script>
