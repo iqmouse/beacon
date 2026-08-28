@@ -78,7 +78,7 @@ back to system fonts offline.
 
 ## Deploying
 
-Hosted on **Cloudflare Pages** (free tier). One-time: `npx wrangler login`.
+Live at **https://beacon-ejo.pages.dev** on Cloudflare Pages (free tier). One-time: `npx wrangler login`.
 Then every deploy is:
 
 ```bash
