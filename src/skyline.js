@@ -163,3 +163,99 @@ if (typeof document !== 'undefined'){
   }catch(e){}
 }
 
+
+/* ---------- home portraits ----------
+   A seeded illustration of one dwelling — the honest, deterministic
+   answer to "let me see the place": clearly art, never a photograph.
+   The facade follows the home's type, the palette the city's warmth,
+   and one window always glows for you. */
+export function drawHomePortrait(cv, home, city){
+  const W = cv.width, H = cv.height;
+  const x = cv.getContext('2d');
+  const rnd = rngFor(home.id);
+  const w = (city.d.warmth||5)/10;
+  const mix = (a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+  const rgbS = c=>'rgb('+c.join(',')+')';
+
+  /* dusk sky, tinted by the city's climate */
+  const g = x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, rgbS(mix([15,26,35],[38,30,42], w)));
+  g.addColorStop(1, rgbS(mix([30,54,64],[96,62,36], w)));
+  x.fillStyle = g; x.fillRect(0,0,W,H);
+
+  /* a few stars + a small moon */
+  x.fillStyle = 'rgba(233,240,238,.6)';
+  for (let i=0;i<10;i++){ x.globalAlpha = .2+rnd()*.4; x.fillRect(rnd()*W, rnd()*H*.4, 1.3, 1.3); }
+  x.globalAlpha = 1;
+  const mx = W*(.12+rnd()*.2), my = H*(.12+rnd()*.12);
+  x.save(); x.shadowColor='rgba(245,201,126,.9)'; x.shadowBlur=10;
+  x.fillStyle='#F2E9D8'; x.beginPath(); x.arc(mx,my,4+rnd()*3,0,7); x.fill(); x.restore();
+
+  /* distant rooftops */
+  x.fillStyle = 'rgba(12,25,34,.55)';
+  for (let i=0;i<4;i++){ const bw=W*(.14+rnd()*.12), bx=rnd()*(W-bw); x.fillRect(bx, H*.52+rnd()*H*.1, bw, H); }
+
+  /* ground */
+  const groundY = H*.86;
+  x.fillStyle = '#0A141A'; x.fillRect(0, groundY, W, H-groundY);
+
+  const wall  = rgbS(mix([32,46,56],[86,62,48], w*.8));
+  const dark  = '#0C1922';
+  const amber = a=>'rgba(240,178,78,'+a+')';
+  const win = (wx,wy,ww,wh,bright)=>{
+    x.fillStyle = bright ? amber(.95) : (rnd()<.45 ? amber(.55) : 'rgba(20,34,44,.9)');
+    if (bright){ x.save(); x.shadowColor=amber(.9); x.shadowBlur=12; x.fillRect(wx,wy,ww,wh); x.restore(); }
+    else x.fillRect(wx,wy,ww,wh);
+  };
+
+  const kind = home.kind || home.type;
+  if (kind === 'Small house'){
+    const hw=W*.5, hx=(W-hw)/2, hh=H*.34, hy=groundY-hh;
+    x.fillStyle = wall; x.fillRect(hx,hy,hw,hh);
+    x.fillStyle = dark;                                   /* pitched roof */
+    x.beginPath(); x.moveTo(hx-W*.04,hy); x.lineTo(hx+hw/2,hy-H*.16); x.lineTo(hx+hw+W*.04,hy); x.closePath(); x.fill();
+    x.fillRect(hx+hw*.72, hy-H*.2, hw*.08, H*.1);         /* chimney */
+    x.fillStyle = '#1A2830'; x.fillRect(hx+hw*.42, groundY-hh*.5, hw*.16, hh*.5);  /* door */
+    win(hx+hw*.1,  hy+hh*.28, hw*.18, hh*.3, true);
+    win(hx+hw*.72, hy+hh*.28, hw*.18, hh*.3, false);
+    x.fillStyle = '#0A141A';                              /* a tree */
+    x.beginPath(); x.arc(hx-W*.1, groundY-H*.09, H*.11, 0, 7); x.fill();
+    x.fillRect(hx-W*.105, groundY-H*.06, W*.012, H*.06);
+  } else if (kind === 'Loft'){
+    const bw=W*.72, bx=(W-bw)/2, bh=H*.5, by=groundY-bh;
+    x.fillStyle = rgbS(mix([48,38,34],[92,58,40], w*.7)); /* brick tone */
+    x.fillRect(bx,by,bw,bh);
+    x.fillStyle = dark; x.fillRect(bx,by,bw,bh*.08);      /* parapet */
+    const cols=4, rows=2, gw=bw/(cols+1)*.62, gh=bh*.3;
+    const you = Math.floor(rnd()*cols);
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
+      const wx=bx+bw*(c+ .55)/(cols+ .6), wy=by+bh*.16+r*(gh+bh*.1);
+      if (r===0){ x.fillStyle='rgba(20,34,44,.9)'; x.beginPath(); x.arc(wx+gw/2, wy+4, gw/2, Math.PI, 0); x.fill(); }
+      win(wx, wy, gw, gh, r===1 && c===you);
+    }
+  } else {
+    /* apartment slice — width by bedrooms */
+    const widths = {'Studio':.34,'1-bedroom':.44,'2-bedroom':.58};
+    const bw=W*(widths[kind]||.44), bx=(W-bw)/2, bh=H*.62, by=groundY-bh;
+    x.fillStyle = wall; x.fillRect(bx,by,bw,bh);
+    x.fillStyle = dark; x.fillRect(bx-W*.015,by-H*.02,bw+W*.03,H*.02);   /* cornice */
+    const floors=5, cols=Math.max(2, Math.round(bw/ (W*.16)));
+    const youF=1+Math.floor(rnd()*(floors-2)), youC=Math.floor(rnd()*cols);
+    for (let f=0;f<floors;f++) for (let c=0;c<cols;c++){
+      const ww=bw/(cols*1.6), wh=bh/(floors*1.9);
+      const wx=bx+bw*(c+.35)/cols, wy=by+bh*(f+.3)/floors;
+      const bright = f===youF && c===youC;
+      win(wx,wy,ww,wh,bright);
+      if (bright){ x.fillStyle='rgba(231,239,238,.25)'; x.fillRect(wx-ww*.25, wy+wh, ww*1.5, 1.5); } /* balcony rail */
+    }
+    x.fillStyle = '#1A2830'; x.fillRect(bx+bw*.4, groundY-bh*.14, bw*.2, bh*.14);  /* entrance */
+    if (rnd()<.6){ x.fillStyle='#0F2018'; x.beginPath(); x.arc(bx+bw+W*.05, groundY-H*.05, H*.07, 0, 7); x.fill(); }
+  }
+
+  /* street lamp */
+  x.strokeStyle='rgba(231,239,238,.25)'; x.lineWidth=1.4;
+  const lx=W*.9;
+  x.beginPath(); x.moveTo(lx,groundY); x.lineTo(lx,groundY-H*.18); x.stroke();
+  x.save(); x.shadowColor=amber(.9); x.shadowBlur=8;
+  x.fillStyle=amber(.95); x.beginPath(); x.arc(lx,groundY-H*.19,2.4,0,7); x.fill(); x.restore();
+}

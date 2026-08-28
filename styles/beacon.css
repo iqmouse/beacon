@@ -601,6 +601,19 @@
   }
   .portal-row{ display:flex; justify-content:center; gap:.7rem; flex-wrap:wrap; margin-top:1.6rem; }
 
+  /* ---------- home portraits ---------- */
+  .home-thumb{
+    width:112px; height:78px; border-radius:10px; flex:none;
+    border:1px solid var(--card-edge); display:block;
+  }
+  .home-card{ cursor:pointer; }
+  .home-mid{ flex:1; min-width:0; }
+  .peek-canvas{
+    width:100%; border-radius:14px; display:block;
+    border:1px solid var(--card-edge); margin-bottom:1rem;
+  }
+  .peek-note{ font-size:.72rem; color:var(--ink-faint); text-align:center; margin:.6rem 0 0; }
+
   /* ---------- api modal ---------- */
   .modal-wrap{
     position:fixed; inset:0; z-index:15; display:grid; place-items:center;

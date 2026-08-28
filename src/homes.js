@@ -35,7 +35,8 @@ export function hoodsFor(city){
 }
 export function genHomes(city){
   const rnd = rngFor('homes:'+city.name);
-  const hoods = hoodsFor(city), base = baseRent(city), out = [];
+  const hoods = (city.hoods && city.hoods.length) ? city.hoods : hoodsFor(city);
+  const base = baseRent(city), out = [];
   for (let i=0;i<8;i++){
     const ty = HOME_TYPES[Math.floor(rnd()*HOME_TYPES.length)];
     const rent = Math.round(base*ty.mult*(0.88+rnd()*0.28)/10)*10;
@@ -45,7 +46,7 @@ export function genHomes(city){
       id:'home|'+city.name+'|'+i,
       city:city.name,
       title:ty.t+' in '+hood,
-      hood, type:ty.t,
+      hood, type:ty.t, kind:ty.t,
       rentN:rent, rent:'$'+rent.toLocaleString('en-US')+'/mo',
       size:sqm+' m²',
       quirk:HOME_QUIRKS[Math.floor(rnd()*HOME_QUIRKS.length)],

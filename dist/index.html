@@ -606,6 +606,19 @@
   }
   .portal-row{ display:flex; justify-content:center; gap:.7rem; flex-wrap:wrap; margin-top:1.6rem; }
 
+  /* ---------- home portraits ---------- */
+  .home-thumb{
+    width:112px; height:78px; border-radius:10px; flex:none;
+    border:1px solid var(--card-edge); display:block;
+  }
+  .home-card{ cursor:pointer; }
+  .home-mid{ flex:1; min-width:0; }
+  .peek-canvas{
+    width:100%; border-radius:14px; display:block;
+    border:1px solid var(--card-edge); margin-bottom:1rem;
+  }
+  .peek-note{ font-size:.72rem; color:var(--ink-faint); text-align:center; margin:.6rem 0 0; }
+
   /* ---------- api modal ---------- */
   .modal-wrap{
     position:fixed; inset:0; z-index:15; display:grid; place-items:center;
@@ -806,7 +819,7 @@
       <button class="ghost" id="homes-back">&larr; back to matches</button>
       <button class="ghost" id="homes-jobs">see jobs here</button>
     </div>
-    <p class="foot-note">Sample homes are illustrative &mdash; prices scaled from researched market rents. The links above search the real local market.</p>
+    <p class="foot-note">Every home is an illustrated sample in a real neighborhood, priced from researched market rents &mdash; tap one to see its portrait; the links search the real local market.</p>
   </section>
 
 </div>
@@ -832,6 +845,20 @@
     </div>
     <div class="row">
       <button class="ghost" id="prof-close">close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="peek-modal">
+  <div class="modal">
+    <canvas class="peek-canvas" id="peek-canvas" width="440" height="300"></canvas>
+    <h3 id="peek-title">&nbsp;</h3>
+    <p id="peek-sub" style="margin:.2rem 0 .6rem"></p>
+    <div class="meta" id="peek-meta" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+    <p class="peek-note">An illustrated portrait, not a photograph &mdash; the link below searches the real market.</p>
+    <div class="row">
+      <a class="btn2" id="peek-link" style="text-decoration:none" target="_blank" rel="noopener">real listings here &nearr;</a>
+      <button class="ghost" id="peek-close">close</button>
     </div>
   </div>
 </div>
@@ -880,6 +907,7 @@ const CITIES = [
    ind:['tech','creative','hosp','remote'],
    why:'Golden light, tiled hills, and a creative scene that runs on long lunches and Atlantic air.',
    cos:['Miradouro Labs','Azulejo Studio','Tejo & Co','Atlântico Collective','Alfama House'],
+   hoods:['Alfama','Bairro Alto','Graça'],
    f:{pop:'2.9M metro',lang:'Portuguese',rent:'$1,700',sun:'2806'}},
   {name:'Austin', country:'United States',
    d:{pace:6,nature:5,culture:6,social:7,warmth:8,afford:4,food:7,transit:3,openness:7,scale:6,safe:5.6,div:7},
@@ -887,6 +915,7 @@ const CITIES = [
    ind:['tech','creative','trades'],
    why:'Big-sky optimism, live music every night, and a tech scene that still wears boots.',
    cos:['Violet Crown Systems','Barton Springs Co','Lone Star Works','Hill Country Collective','Mueller & Main'],
+   hoods:['South Congress','East Austin','Hyde Park'],
    f:{pop:'2.4M metro',lang:'English',rent:'$1,939',sun:'2644'}},
   {name:'Copenhagen', country:'Denmark',
    d:{pace:4,nature:6,culture:8,social:5,warmth:3,afford:3,food:8,transit:9,openness:6,scale:5,safe:7.4,div:6},
@@ -894,6 +923,7 @@ const CITIES = [
    ind:['creative','tech','health','edu'],
    why:'Design in the bones of everything, harbor swims at lunch, candles against the dark.',
    cos:['Nyhavn Digital','Hygge Collective','Studio Ø','Cykel Works','Kastellet Group'],
+   hoods:['Nørrebro','Vesterbro','Østerbro'],
    f:{pop:'2.1M metro',lang:'Danish · English everywhere',rent:'$1,988',sun:'1912'}},
   {name:'Tokyo', country:'Japan',
    d:{pace:9,nature:4,culture:9,social:6,warmth:6,afford:6,food:10,transit:10,openness:4,scale:10,safe:7.6,div:3},
@@ -901,6 +931,7 @@ const CITIES = [
    ind:['tech','finance','creative'],
    why:'A thousand tiny worlds stacked neatly together — endless depth for the endlessly curious.',
    cos:['Shibuya Systems','Kanda Craft','Sumida Finance','Meguro Collective','Yanaka Atelier'],
+   hoods:['Shimokitazawa','Nakameguro','Koenji'],
    f:{pop:'37M metro',lang:'Japanese',rent:'$1,252',sun:'1877'}},
   {name:'Melbourne', country:'Australia',
    d:{pace:5,nature:6,culture:8,social:7,warmth:6,afford:4,food:9,transit:7,openness:8,scale:7,safe:5.6,div:9},
@@ -908,6 +939,7 @@ const CITIES = [
    ind:['creative','edu','health'],
    why:'Laneway coffee culture, four seasons in a day, and an arts scene with real gravity.',
    cos:['Fitzroy & Field','Yarra Digital','Brunswick Collective','Laneway Learning Co','Carlton Works'],
+   hoods:['Fitzroy','Brunswick','St Kilda'],
    f:{pop:'5.2M metro',lang:'English',rent:'$1,715',sun:'2373'}},
   {name:'Berlin', country:'Germany',
    d:{pace:6,nature:5,culture:9,social:8,warmth:4,afford:4,food:7,transit:9,openness:8,scale:7,safe:5.5,div:8},
@@ -915,6 +947,7 @@ const CITIES = [
    ind:['tech','creative','remote'],
    why:'Reinvention is the local sport — cheap studios, long nights, and room to become someone new.',
    cos:['Spree Labs','Kreuzberg Kollektiv','Mitte Digital','Tempelhof Collective','Ostkreuz Works'],
+   hoods:['Kreuzberg','Prenzlauer Berg','Neukölln'],
    f:{pop:'3.8M metro',lang:'German · English-friendly',rent:'$1,491',sun:'1626'}},
   {name:'Vancouver', country:'Canada',
    d:{pace:4,nature:9,culture:6,social:5,warmth:4,afford:4,food:8,transit:7,openness:8,scale:6,safe:5.7,div:9},
@@ -922,6 +955,7 @@ const CITIES = [
    ind:['tech','creative','health'],
    why:'Mountains at the end of every street, ocean at the other — the outdoors is the nightlife.',
    cos:['Seawall Studios','Grouse Digital','Pacific Rim Collective','Cypress Works','Gastown & Co'],
+   hoods:['Kitsilano','Mount Pleasant','Commercial Drive'],
    f:{pop:'2.7M metro',lang:'English',rent:'$1,855',sun:'1938'}},
   {name:'Mexico City', country:'Mexico',
    d:{pace:7,nature:4,culture:9,social:8,warmth:7,afford:6,food:10,transit:6,openness:7,scale:10,safe:3.4,div:6},
@@ -929,6 +963,7 @@ const CITIES = [
    ind:['creative','finance','hosp','remote'],
    why:'Color, chaos, and generosity — a megacity that somehow still feels like a neighborhood.',
    cos:['Roma Norte Labs','Condesa Creative','Chapultepec Capital','Coyoacán Collective','La Juárez Works'],
+   hoods:['Roma Norte','Condesa','Coyoacán'],
    f:{pop:'22M metro',lang:'Spanish',rent:'$1,132',sun:'2555'}},
   {name:'Amsterdam', country:'Netherlands',
    d:{pace:5,nature:5,culture:8,social:7,warmth:4,afford:3,food:7,transit:10,openness:8,scale:5,safe:7.0,div:8},
@@ -936,6 +971,7 @@ const CITIES = [
    ind:['tech','finance','creative'],
    why:'Everything within a bike ride, pragmatism with a painter&rsquo;s eye, canals that slow you down.',
    cos:['Grachten Digital','De Pijp Studio','Amstel Capital','Jordaan Collective','Noord Works'],
+   hoods:['Jordaan','De Pijp','Oud-West'],
    f:{pop:'2.5M metro',lang:'Dutch · English everywhere',rent:'$2,662',sun:'1779'}},
   {name:'Barcelona', country:'Spain',
    d:{pace:5,nature:7,culture:8,social:8,warmth:8,afford:5,food:9,transit:8,openness:7,scale:7,safe:4.8,div:8},
@@ -943,6 +979,7 @@ const CITIES = [
    ind:['creative','hosp','tech','remote'],
    why:'Beach mornings, Gaudí afternoons, dinners that start at ten — life lived outdoors.',
    cos:['Gràcia Studio','Barceloneta Labs','Eixample & Co','Montjuïc Collective','El Born Works'],
+   hoods:['Gràcia','El Born','Poble-sec'],
    f:{pop:'5.6M metro',lang:'Spanish & Catalan',rent:'$1,704',sun:'2591'}},
   {name:'Seoul', country:'South Korea',
    d:{pace:9,nature:5,culture:8,social:7,warmth:5,afford:6,food:9,transit:10,openness:5,scale:9,safe:7.5,div:3},
@@ -950,6 +987,7 @@ const CITIES = [
    ind:['tech','creative','finance'],
    why:'Runs on ambition and neon — the fastest culture on earth, with mountains inside the city limits.',
    cos:['Han River Labs','Hongdae Studio','Gangnam Capital','Bukhan Collective','Ikseon Works'],
+   hoods:['Hongdae','Itaewon','Seongsu'],
    f:{pop:'26M metro',lang:'Korean',rent:'$853',sun:'2066'}},
   {name:'Denver', country:'United States',
    d:{pace:5,nature:9,culture:5,social:6,warmth:5,afford:4,food:6,transit:4,openness:7,scale:6,safe:5.2,div:6},
@@ -957,6 +995,7 @@ const CITIES = [
    ind:['tech','health','trades'],
    why:'Three hundred days of sun and the Rockies on your doorstep — weekends are the whole point.',
    cos:['Front Range Labs','Mile High Works','Platte & Pearl','Alpenglow Collective','RiNo Studio'],
+   hoods:['RiNo','Capitol Hill','Highlands'],
    f:{pop:'3.0M metro',lang:'English',rent:'$2,027',sun:'3107'}},
   {name:'Montréal', country:'Canada',
    d:{pace:5,nature:6,culture:8,social:7,warmth:3,afford:6,food:8,transit:8,openness:7,scale:6,safe:6.7,div:8},
@@ -964,6 +1003,7 @@ const CITIES = [
    ind:['creative','tech','edu'],
    why:'Two languages, festival summers, deep winters — bohemia that you can actually afford.',
    cos:['Mile End Studio','Plateau Digital','Vieux-Port Works','Laurentides Collective','St-Viateur & Co'],
+   hoods:['Le Plateau','Mile End','Villeray'],
    f:{pop:'4.3M metro',lang:'French & English',rent:'$1,294',sun:'2051'}},
   {name:'Cape Town', country:'South Africa',
    d:{pace:4,nature:10,culture:7,social:6,warmth:8,afford:7,food:8,transit:3,openness:7,scale:6,safe:2.6,div:7},
@@ -971,6 +1011,7 @@ const CITIES = [
    ind:['creative','hosp','remote'],
    why:'A mountain in the middle of the city and two oceans to choose from — staggering, every day.',
    cos:['Table Bay Studio','Kloof Street Labs','Bo-Kaap & Co','Two Oceans Collective','Woodstock Works'],
+   hoods:['Gardens','Sea Point','Woodstock'],
    f:{pop:'4.8M metro',lang:'English · Afrikaans · Xhosa',rent:'$1,085',sun:'3094'}},
   {name:'Edinburgh', country:'Scotland',
    d:{pace:4,nature:7,culture:8,social:6,warmth:3,afford:4,food:6,transit:7,openness:7,scale:4,safe:7.0,div:6},
@@ -978,6 +1019,7 @@ const CITIES = [
    ind:['finance','edu','creative'],
    why:'Stone, mist, and stories — a compact, literary city with wild hills a bus ride away.',
    cos:['Royal Mile Capital','Leith Studio','Arthur&rsquo;s Seat Works','Firth Collective','New Town Digital'],
+   hoods:['Stockbridge','Leith','Marchmont'],
    f:{pop:'0.9M metro',lang:'English',rent:'$1,659',sun:'1428'}},
   {name:'Medellín', country:'Colombia',
    d:{pace:4,nature:8,culture:6,social:8,warmth:8,afford:7,food:7,transit:6,openness:8,scale:6,safe:4.6,div:5},
@@ -985,6 +1027,7 @@ const CITIES = [
    ind:['remote','tech','hosp'],
    why:'The city of eternal spring — warm evenings, warmer people, and a remote-work scene in full bloom.',
    cos:['Poblado Labs','Laureles Studio','Aburrá Works','Envigado Collective','Provenza & Co'],
+   hoods:['El Poblado','Laureles','Envigado'],
    f:{pop:'4.0M metro',lang:'Spanish',rent:'$978',sun:'1892'}},
   {name:'Singapore', country:'Singapore',
    d:{pace:8,nature:5,culture:7,social:5,warmth:9,afford:2,food:10,transit:10,openness:7,scale:8,safe:7.8,div:9},
@@ -992,6 +1035,7 @@ const CITIES = [
    ind:['finance','tech','health'],
    why:'A garden wired for ambition — hawker dinners, spotless order, all of Asia a short flight away.',
    cos:['Marina Systems','Tiong Bahru Studio','Raffles Capital','Sentosa Collective','Katong Works'],
+   hoods:['Tiong Bahru','Katong','Holland Village'],
    f:{pop:'6.0M',lang:'English · Mandarin · Malay · Tamil',rent:'$2,950',sun:'2022'}},
   {name:'Portland', country:'United States',
    d:{pace:3,nature:8,culture:7,social:5,warmth:4,afford:3,food:8,transit:6,openness:6,scale:5,safe:4.2,div:5},
@@ -999,6 +1043,7 @@ const CITIES = [
    ind:['creative','trades','tech'],
    why:'Slow, green, and handmade — a city that takes its coffee, bikes, and weirdness seriously.',
    cos:['Willamette Works','Hawthorne Studio','Cascadia Labs','Rose City Collective','Alberta & Co'],
+   hoods:['Alberta Arts','Hawthorne','Sellwood'],
    f:{pop:'2.5M metro',lang:'English',rent:'$2,082',sun:'2341'}},
   {name:'New York', country:'United States',
    d:{pace:10,nature:3,culture:10,social:8,warmth:5,afford:0,food:10,transit:9,openness:9,scale:10,safe:4.9,div:10},
@@ -1006,6 +1051,7 @@ const CITIES = [
    ind:['finance','tech','creative','health'],
    why:'The city that assumes you have somewhere to be — everything, all of it, all at once.',
    cos:['Bowery & Grand','Hudson Yards Labs','Greenpoint Studio','Canal Street Works','Fifth & Main Capital'],
+   hoods:['Williamsburg','Astoria','Park Slope'],
    f:{pop:'19.5M metro',lang:'English',rent:'$4,358',sun:'2535'}},
   {name:'London', country:'United Kingdom',
    d:{pace:8,nature:4,culture:10,social:7,warmth:3,afford:2,food:8,transit:9,openness:9,scale:10,safe:4.5,div:10},
@@ -1013,6 +1059,7 @@ const CITIES = [
    ind:['finance','tech','creative','edu'],
    why:'Two thousand years of layers, a village for every mood, and the world passing through daily.',
    cos:['Shoreditch Digital','Marylebone & Co','Southbank Studio','Camden Works','Square Mile Capital'],
+   hoods:['Hackney','Camden','Peckham'],
    f:{pop:'14M metro',lang:'English',rent:'$3,044',sun:'1675'}},
   {name:'Paris', country:'France',
    d:{pace:7,nature:3,culture:10,social:7,warmth:5,afford:4,food:10,transit:9,openness:6,scale:9,safe:4.2,div:8},
@@ -1020,6 +1067,7 @@ const CITIES = [
    ind:['creative','finance','edu','hosp'],
    why:'Beauty as civic policy — long dinners, longer arguments, and the best walk home on earth.',
    cos:['Le Marais Atelier','Rive Gauche Studio','Bastille Works','Opéra Capital','Belleville & Fils'],
+   hoods:['Le Marais','Belleville','Montmartre'],
    f:{pop:'13M metro',lang:'French',rent:'$1,643',sun:'1662'}},
   {name:'Vienna', country:'Austria',
    d:{pace:4,nature:5,culture:9,social:5,warmth:4,afford:5,food:7,transit:10,openness:5,scale:7,safe:7.1,div:7},
@@ -1027,6 +1075,7 @@ const CITIES = [
    ind:['edu','health','finance','creative'],
    why:'Coffeehouse hours, concert halls, and a city that runs so smoothly you forget to worry.',
    cos:['Ringstrasse Group','Naschmarkt Studio','Donau Digital','Leopoldstadt Works','Alsergrund & Co'],
+   hoods:['Neubau','Leopoldstadt','Josefstadt'],
    f:{pop:'2.9M metro',lang:'German',rent:'$1,355',sun:'2048'}},
   {name:'Prague', country:'Czechia',
    d:{pace:5,nature:5,culture:9,social:7,warmth:4,afford:6,food:6,transit:9,openness:6,scale:6,safe:7.5,div:5},
@@ -1034,6 +1083,7 @@ const CITIES = [
    ind:['tech','creative','edu'],
    why:'A fairy tale with good wifi — spires, beer gardens, and a growing quiet tech scene.',
    cos:['Vltava Labs','Žižkov Studio','Malá Strana Works','Karlín Digital','Letná & Co'],
+   hoods:['Vinohrady','Žižkov','Karlín'],
    f:{pop:'2.7M metro',lang:'Czech · English in center',rent:'$1,183',sun:'1668'}},
   {name:'Athens', country:'Greece',
    d:{pace:5,nature:6,culture:9,social:8,warmth:9,afford:6,food:9,transit:6,openness:7,scale:8,safe:4.5,div:5},
@@ -1041,6 +1091,7 @@ const CITIES = [
    ind:['hosp','creative','remote'],
    why:'Ancient stones, new energy — rooftop evenings under the Acropolis and islands a ferry away.',
    cos:['Plaka Studio','Exarchia Collective','Aegean Works','Kolonaki & Co','Psyrri Labs'],
+   hoods:['Koukaki','Exarchia','Pangrati'],
    f:{pop:'3.6M metro',lang:'Greek',rent:'$757',sun:'2773'}},
   {name:'Valencia', country:'Spain',
    d:{pace:3,nature:7,culture:7,social:8,warmth:9,afford:6,food:9,transit:8,openness:8,scale:6,safe:6.2,div:6},
@@ -1048,6 +1099,7 @@ const CITIES = [
    ind:['remote','hosp','creative','tech'],
    why:'Barcelona&rsquo;s unhurried cousin — paella by the sea, a river-turned-park, life at street level.',
    cos:['Turia Studio','Ruzafa Labs','El Carmen Works','Malvarrosa & Co','Cabanyal Collective'],
+   hoods:['Ruzafa','El Carmen','Benimaclet'],
    f:{pop:'1.6M metro',lang:'Spanish',rent:'$1,489',sun:'2690'}},
   {name:'Taipei', country:'Taiwan',
    d:{pace:7,nature:7,culture:8,social:6,warmth:8,afford:6,food:10,transit:10,openness:6,scale:8,safe:8.3,div:3},
@@ -1055,6 +1107,7 @@ const CITIES = [
    ind:['tech','edu','health'],
    why:'Night markets below, green mountains above, and the friendliest big city in Asia between them.',
    cos:['Daan Digital','Ximen Studio','Songshan Works','Beitou & Co','Shida Labs'],
+   hoods:['Daan','Zhongshan','Songshan'],
    f:{pop:'7.0M metro',lang:'Mandarin',rent:'$865',sun:'1374'}},
   {name:'Bangkok', country:'Thailand',
    d:{pace:8,nature:4,culture:8,social:8,warmth:10,afford:7,food:10,transit:7,openness:8,scale:10,safe:6.2,div:6},
@@ -1062,6 +1115,7 @@ const CITIES = [
    ind:['hosp','remote','finance'],
    why:'A river city that never quite sleeps — street food as high art, temples between the towers.',
    cos:['Sukhumvit Labs','Ari Studio','Chao Phraya Works','Thonglor & Co','Silom Capital'],
+   hoods:['Ari','Thonglor','Banglamphu'],
    f:{pop:'15M metro',lang:'Thai · English common',rent:'$713',sun:'2624'}},
   {name:'Chiang Mai', country:'Thailand',
    d:{pace:2,nature:8,culture:7,social:6,warmth:9,afford:8,food:9,transit:4,openness:8,scale:3,safe:7.8,div:5},
@@ -1069,6 +1123,7 @@ const CITIES = [
    ind:['remote','hosp','creative'],
    why:'Temple bells and mountain mist — the slow-morning capital of the remote-work world.',
    cos:['Nimman Studio','Old City Works','Ping River Labs','Santitham & Co','Doi Collective'],
+   hoods:['Nimman','Old City','Santitham'],
    f:{pop:'1.2M metro',lang:'Thai',rent:'$476',sun:'2512'}},
   {name:'Sydney', country:'Australia',
    d:{pace:6,nature:8,culture:7,social:7,warmth:7,afford:3,food:8,transit:7,openness:8,scale:8,safe:6.6,div:9},
@@ -1076,6 +1131,7 @@ const CITIES = [
    ind:['finance','tech','health'],
    why:'Harbor light and surf before work — an outdoors city with a big-league career underneath.',
    cos:['Harbour Digital','Surry Hills Studio','Bondi Works','Circular Quay Capital','Newtown & Co'],
+   hoods:['Surry Hills','Newtown','Manly'],
    f:{pop:'5.5M metro',lang:'English',rent:'$2,501',sun:'2628'}},
   {name:'Auckland', country:'New Zealand',
    d:{pace:4,nature:9,culture:6,social:6,warmth:6,afford:5,food:7,transit:5,openness:8,scale:5,safe:4.9,div:8},
@@ -1083,6 +1139,7 @@ const CITIES = [
    ind:['health','edu','trades'],
    why:'Two harbors, fifty volcanoes, and a gentle pace — the edge of the world, comfortably.',
    cos:['Ponsonby Studio','Waitematā Works','K Road Collective','Devonport & Co','Wynyard Labs'],
+   hoods:['Ponsonby','Mount Eden','Devonport'],
    f:{pop:'1.7M metro',lang:'English & Māori',rent:'$1,322',sun:'2003'}},
   {name:'Buenos Aires', country:'Argentina',
    d:{pace:6,nature:3,culture:9,social:9,warmth:7,afford:6,food:8,transit:7,openness:7,scale:10,safe:3.7,div:7},
@@ -1090,6 +1147,7 @@ const CITIES = [
    ind:['creative','remote','edu'],
    why:'Midnight steak, morning café con leche, and a city that treats conversation as sport.',
    cos:['Palermo Studio','San Telmo Works','Recoleta & Co','La Boca Collective','Retiro Capital'],
+   hoods:['Palermo','San Telmo','Recoleta'],
    f:{pop:'15M metro',lang:'Spanish',rent:'$723',sun:'2525'}},
   {name:'Toronto', country:'Canada',
    d:{pace:7,nature:5,culture:8,social:7,warmth:3,afford:5,food:9,transit:7,openness:9,scale:9,safe:5.6,div:10},
@@ -1097,6 +1155,7 @@ const CITIES = [
    ind:['finance','tech','health'],
    why:'Half the world in one city — every cuisine, every language, and a lake that looks like a sea.',
    cos:['Ossington Studio','Distillery Works','Bay Street Capital','Kensington Labs','Leslieville & Co'],
+   hoods:['Leslieville','The Annex','Roncesvalles'],
    f:{pop:'6.5M metro',lang:'English',rent:'$1,653',sun:'2066'}},
   {name:'Rio de Janeiro', country:'Brazil',
    d:{pace:5,nature:9,culture:8,social:9,warmth:9,afford:7,food:8,transit:5,openness:7,scale:9,safe:2.5,div:6},
@@ -1104,6 +1163,7 @@ const CITIES = [
    ind:['hosp','creative','remote'],
    why:'Mountains falling into the sea, music in the streets — a city built where it shouldn&rsquo;t fit.',
    cos:['Ipanema Studio','Santa Teresa Works','Lapa Collective','Leblon & Co','Botafogo Labs'],
+   hoods:['Ipanema','Botafogo','Santa Teresa'],
    f:{pop:'13M metro',lang:'Portuguese',rent:'$832',sun:'2187'}},
   {name:'Dubai', country:'United Arab Emirates',
    d:{pace:8,nature:3,culture:6,social:6,warmth:10,afford:4,food:8,transit:7,openness:9,scale:8,safe:8.4,div:10},
@@ -1111,6 +1171,7 @@ const CITIES = [
    ind:['finance','tech','hosp'],
    why:'A crossroads built at full speed — half the planet within an eight-hour flight.',
    cos:['Marina Digital','Al Quoz Studio','DIFC Capital','Jumeirah Works','Deira & Co'],
+   hoods:['Jumeirah','Al Barsha','Al Fahidi'],
    f:{pop:'3.6M',lang:'Arabic · English everywhere',rent:'$2,476',sun:'3508'}},
   {name:'Chicago', country:'United States',
    d:{pace:7,nature:4,culture:9,social:7,warmth:3,afford:3,food:9,transit:8,openness:8,scale:9,safe:3.5,div:8},
@@ -1118,6 +1179,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'Big-shouldered architecture, a lake like an ocean, winters that build character.',
    cos:['Wicker Park Studio','Logan Square Works','The Loop Labs','Wicker Park Collective','Logan Square & Co'],
+   hoods:['Wicker Park','Logan Square','The Loop'],
    f:{pop:'9.5M metro',lang:'English',rent:'$2,413',sun:'2508'}},
   {name:'Seattle', country:'United States',
    d:{pace:5,nature:8,culture:7,social:5,warmth:3,afford:2,food:8,transit:7,openness:7,scale:7,safe:4.5,div:7},
@@ -1125,6 +1187,7 @@ const CITIES = [
    ind:['tech','creative','health'],
    why:'Evergreens, espresso, and software &mdash; rain as a creative medium.',
    cos:['Ballard Studio','Capitol Hill Works','Fremont Labs','Ballard Collective','Capitol Hill & Co'],
+   hoods:['Ballard','Capitol Hill','Fremont'],
    f:{pop:'4.0M metro',lang:'English',rent:'$2,554',sun:'2170'}},
   {name:'San Francisco', country:'United States',
    d:{pace:7,nature:7,culture:8,social:6,warmth:5,afford:1,food:9,transit:7,openness:8,scale:7,safe:4.0,div:8},
@@ -1132,6 +1195,7 @@ const CITIES = [
    ind:['tech','finance','creative'],
    why:'Fog rolling over the hills and the future being typed beneath it.',
    cos:['Mission Studio','Presidio Works','Noe Valley Labs','Mission Collective','Presidio & Co'],
+   hoods:['Mission','Presidio','Noe Valley'],
    f:{pop:'4.7M metro',lang:'English',rent:'$3,798',sun:'3062'}},
   {name:'Los Angeles', country:'United States',
    d:{pace:6,nature:7,culture:8,social:7,warmth:8,afford:2,food:9,transit:3,openness:8,scale:10,safe:4.6,div:9},
@@ -1139,6 +1203,7 @@ const CITIES = [
    ind:['creative','tech','hosp'],
    why:'A hundred cities wearing one name, all of them golden at sunset.',
    cos:['Silver Lake Studio','Venice Works','Echo Park Labs','Silver Lake Collective','Venice & Co'],
+   hoods:['Silver Lake','Venice','Echo Park'],
    f:{pop:'13M metro',lang:'English & Spanish',rent:'$2,614',sun:'3254'}},
   {name:'San Diego', country:'United States',
    d:{pace:4,nature:8,culture:6,social:7,warmth:8,afford:2,food:8,transit:4,openness:8,scale:6,safe:6.0,div:7},
@@ -1146,6 +1211,7 @@ const CITIES = [
    ind:['health','tech','trades'],
    why:'Seventy-two degrees and the Pacific &mdash; ambition, but relaxed about it.',
    cos:['North Park Studio','La Jolla Works','Ocean Beach Labs','North Park Collective','La Jolla & Co'],
+   hoods:['North Park','La Jolla','Ocean Beach'],
    f:{pop:'3.3M metro',lang:'English',rent:'$3,268',sun:'3055'}},
   {name:'Boston', country:'United States',
    d:{pace:7,nature:5,culture:9,social:6,warmth:3,afford:2,food:8,transit:8,openness:7,scale:7,safe:6.0,div:7},
@@ -1153,6 +1219,7 @@ const CITIES = [
    ind:['edu','health','finance'],
    why:'Brick, books, and stubborn brilliance packed around a harbor.',
    cos:['Back Bay Studio','Cambridge Works','Jamaica Plain Labs','Back Bay Collective','Cambridge & Co'],
+   hoods:['Back Bay','Cambridge','Jamaica Plain'],
    f:{pop:'4.9M metro',lang:'English',rent:'$3,401',sun:'2634'}},
   {name:'Miami', country:'United States',
    d:{pace:7,nature:6,culture:7,social:9,warmth:10,afford:2,food:8,transit:4,openness:9,scale:8,safe:4.7,div:9},
@@ -1160,6 +1227,7 @@ const CITIES = [
    ind:['finance','hosp','creative'],
    why:'Latin America&rsquo;s glittering front porch &mdash; neon, salt air, deals by the pool.',
    cos:['Wynwood Studio','Brickell Works','Little Havana Labs','Wynwood Collective','Brickell & Co'],
+   hoods:['Wynwood','Brickell','Little Havana'],
    f:{pop:'6.1M metro',lang:'English & Spanish',rent:'$2,773',sun:'3154'}},
   {name:'Nashville', country:'United States',
    d:{pace:5,nature:5,culture:8,social:8,warmth:7,afford:4,food:7,transit:3,openness:8,scale:6,safe:5.5,div:5},
@@ -1167,6 +1235,7 @@ const CITIES = [
    ind:['creative','health','hosp'],
    why:'Songs get written before breakfast &mdash; a friendly boomtown in three-four time.',
    cos:['East Nashville Studio','The Gulch Works','Germantown Labs','East Nashville Collective','The Gulch & Co'],
+   hoods:['East Nashville','The Gulch','Germantown'],
    f:{pop:'2.0M metro',lang:'English',rent:'$1,953',sun:'2510'}},
   {name:'New Orleans', country:'United States',
    d:{pace:3,nature:4,culture:10,social:9,warmth:9,afford:4,food:9,transit:4,openness:7,scale:5,safe:3.2,div:6},
@@ -1174,6 +1243,7 @@ const CITIES = [
    ind:['hosp','creative','edu'],
    why:'Brass bands, shotgun houses, and dinners that last past midnight.',
    cos:['Bywater Studio','Marigny Works','Garden District Labs','Bywater Collective','Marigny & Co'],
+   hoods:['Bywater','Marigny','Garden District'],
    f:{pop:'1.3M metro',lang:'English',rent:'$1,853',sun:'2649'}},
   {name:'Philadelphia', country:'United States',
    d:{pace:6,nature:4,culture:8,social:7,warmth:4,afford:4,food:8,transit:7,openness:7,scale:8,safe:3.5,div:7},
@@ -1181,6 +1251,7 @@ const CITIES = [
    ind:['health','edu','creative'],
    why:'Underdog charm, world-class murals, and row houses full of history.',
    cos:['Fishtown Studio','Rittenhouse Works','South Philly Labs','Fishtown Collective','Rittenhouse & Co'],
+   hoods:['Fishtown','Rittenhouse','South Philly'],
    f:{pop:'6.2M metro',lang:'English',rent:'$1,971',sun:'2498'}},
   {name:'Washington', country:'United States',
    d:{pace:7,nature:5,culture:9,social:6,warmth:5,afford:2,food:8,transit:8,openness:7,scale:8,safe:4.0,div:8},
@@ -1188,6 +1259,7 @@ const CITIES = [
    ind:['edu','finance','health'],
    why:'Marble and cherry blossoms &mdash; a city that reads the footnotes.',
    cos:['Adams Morgan Studio','Georgetown Works','Navy Yard Labs','Adams Morgan Collective','Georgetown & Co'],
+   hoods:['Adams Morgan','Georgetown','Navy Yard'],
    f:{pop:'6.4M metro',lang:'English',rent:'$2,669',sun:'2528'}},
   {name:'Minneapolis', country:'United States',
    d:{pace:4,nature:7,culture:7,social:6,warmth:2,afford:4,food:7,transit:6,openness:7,scale:6,safe:4.4,div:6},
@@ -1195,6 +1267,7 @@ const CITIES = [
    ind:['health','finance','creative'],
    why:'Lakes in every direction, art everywhere, winters worn like a badge.',
    cos:['Uptown Studio','Northeast Works','Mill District Labs','Uptown Collective','Northeast & Co'],
+   hoods:['Uptown','Northeast','Mill District'],
    f:{pop:'3.7M metro',lang:'English',rent:'$1,817',sun:'2711'}},
   {name:'Salt Lake City', country:'United States',
    d:{pace:4,nature:9,culture:5,social:5,warmth:5,afford:5,food:6,transit:5,openness:6,scale:5,safe:6.4,div:4},
@@ -1202,6 +1275,7 @@ const CITIES = [
    ind:['tech','health','trades'],
    why:'Powder mornings and desk afternoons &mdash; the mountains run the calendar.',
    cos:['Sugar House Studio','The Avenues Works','Liberty Wells Labs','Sugar House Collective','The Avenues & Co'],
+   hoods:['Sugar House','The Avenues','Liberty Wells'],
    f:{pop:'1.3M metro',lang:'English',rent:'$1,655',sun:'3029'}},
   {name:'Phoenix', country:'United States',
    d:{pace:5,nature:7,culture:5,social:6,warmth:10,afford:4,food:6,transit:3,openness:7,scale:8,safe:4.7,div:6},
@@ -1209,6 +1283,7 @@ const CITIES = [
    ind:['tech','health','trades'],
    why:'Saguaro sunsets and swimming-pool Decembers &mdash; the desert, air-conditioned.',
    cos:['Roosevelt Row Studio','Arcadia Works','Tempe Labs','Roosevelt Row Collective','Arcadia & Co'],
+   hoods:['Roosevelt Row','Arcadia','Tempe'],
    f:{pop:'5.0M metro',lang:'English',rent:'$1,780',sun:'3872'}},
   {name:'Boise', country:'United States',
    d:{pace:3,nature:9,culture:5,social:6,warmth:5,afford:5,food:6,transit:4,openness:7,scale:4,safe:6.2,div:3},
@@ -1216,6 +1291,7 @@ const CITIES = [
    ind:['tech','trades','health'],
    why:'Foothills at the door, a river through town, nobody in a hurry.',
    cos:['North End Studio','Hyde Park Works','Boise Bench Labs','North End Collective','Hyde Park & Co'],
+   hoods:['North End','Hyde Park','Boise Bench'],
    f:{pop:'0.8M metro',lang:'English',rent:'$1,608',sun:'2993'}},
   {name:'Asheville', country:'United States',
    d:{pace:2,nature:9,culture:7,social:6,warmth:5,afford:4,food:8,transit:3,openness:7,scale:3,safe:6.5,div:4},
@@ -1223,6 +1299,7 @@ const CITIES = [
    ind:['creative','hosp','trades'],
    why:'Blue Ridge mornings, craft everything, banjos taken seriously.',
    cos:['River Arts Studio','Montford Works','West Asheville Labs','River Arts Collective','Montford & Co'],
+   hoods:['River Arts','Montford','West Asheville'],
    f:{pop:'0.5M metro',lang:'English',rent:'$1,700',sun:'2340'}},
   {name:'Savannah', country:'United States',
    d:{pace:3,nature:6,culture:8,social:7,warmth:8,afford:5,food:7,transit:4,openness:7,scale:3,safe:5.8,div:5},
@@ -1230,6 +1307,7 @@ const CITIES = [
    ind:['creative','hosp','edu'],
    why:'Spanish moss and slow afternoons &mdash; a city drawn in oak and shadow.',
    cos:['Starland Studio','Victorian District Works','Thomas Square Labs','Starland Collective','Victorian District & Co'],
+   hoods:['Starland','Victorian District','Thomas Square'],
    f:{pop:'0.4M metro',lang:'English',rent:'$1,600',sun:'2700'}},
   {name:'Honolulu', country:'United States',
    d:{pace:3,nature:9,culture:6,social:7,warmth:10,afford:1,food:8,transit:5,openness:7,scale:5,safe:5.3,div:8},
@@ -1237,6 +1315,7 @@ const CITIES = [
    ind:['hosp','health','remote'],
    why:'Trade winds, volcanic ridges, and the ocean as a daily appointment.',
    cos:['Kaimuki Studio','Kakaako Works','Manoa Labs','Kaimuki Collective','Kakaako & Co'],
+   hoods:['Kaimuki','Kakaako','Manoa'],
    f:{pop:'1.0M metro',lang:'English & Hawaiian',rent:'$2,913',sun:'3036'}},
   {name:'Pittsburgh', country:'United States',
    d:{pace:4,nature:6,culture:7,social:6,warmth:3,afford:5,food:7,transit:6,openness:7,scale:6,safe:6.1,div:5},
@@ -1244,6 +1323,7 @@ const CITIES = [
    ind:['tech','health','edu'],
    why:'Steel bones, robot labs, and a bridge to every neighborhood.',
    cos:['Lawrenceville Studio','Shadyside Works','Strip District Labs','Lawrenceville Collective','Shadyside & Co'],
+   hoods:['Lawrenceville','Shadyside','Strip District'],
    f:{pop:'2.4M metro',lang:'English',rent:'$1,570',sun:'2021'}},
   {name:'Santa Fe', country:'United States',
    d:{pace:2,nature:8,culture:9,social:5,warmth:6,afford:4,food:8,transit:3,openness:6,scale:2,safe:6.0,div:5},
@@ -1251,6 +1331,7 @@ const CITIES = [
    ind:['creative','hosp','health'],
    why:'Adobe light and gallery dust &mdash; the high desert as a way of life.',
    cos:['Canyon Road Studio','Railyard Works','The Plaza Labs','Canyon Road Collective','Railyard & Co'],
+   hoods:['Canyon Road','Railyard','The Plaza'],
    f:{pop:'0.2M metro',lang:'English & Spanish',rent:'$1,800',sun:'3200'}},
   {name:'Calgary', country:'Canada',
    d:{pace:5,nature:9,culture:5,social:6,warmth:2,afford:5,food:6,transit:5,openness:8,scale:6,safe:6.2,div:8},
@@ -1258,6 +1339,7 @@ const CITIES = [
    ind:['finance','tech','trades'],
    why:'Chinook winds, big sky, and the Rockies an hour west.',
    cos:['Kensington Studio','Inglewood Works','Beltline Labs','Kensington Collective','Inglewood & Co'],
+   hoods:['Kensington','Inglewood','Beltline'],
    f:{pop:'1.6M metro',lang:'English',rent:'$1,291',sun:'2396'}},
   {name:'Ottawa', country:'Canada',
    d:{pace:4,nature:7,culture:7,social:5,warmth:2,afford:5,food:6,transit:6,openness:8,scale:6,safe:6.9,div:7},
@@ -1265,6 +1347,7 @@ const CITIES = [
    ind:['edu','tech','health'],
    why:'A canal that freezes into a commute &mdash; tidy, bilingual, quietly happy.',
    cos:['The Glebe Studio','Westboro Works','ByWard Labs','The Glebe Collective','Westboro & Co'],
+   hoods:['The Glebe','Westboro','ByWard'],
    f:{pop:'1.5M metro',lang:'English & French',rent:'$1,499',sun:'2084'}},
   {name:'Halifax', country:'Canada',
    d:{pace:3,nature:8,culture:6,social:7,warmth:3,afford:5,food:7,transit:5,openness:8,scale:4,safe:6.0,div:5},
@@ -1272,6 +1355,7 @@ const CITIES = [
    ind:['edu','health','trades'],
    why:'Fog horns and fiddle nights on the edge of the Atlantic.',
    cos:['North End Studio','Hydrostone Works','The Waterfront Labs','North End Collective','Hydrostone & Co'],
+   hoods:['North End','Hydrostone','The Waterfront'],
    f:{pop:'0.5M metro',lang:'English',rent:'$1,513',sun:'1962'}},
   {name:'Québec City', country:'Canada',
    d:{pace:3,nature:7,culture:9,social:6,warmth:2,afford:6,food:8,transit:7,openness:5,scale:4,safe:7.8,div:4},
@@ -1279,6 +1363,7 @@ const CITIES = [
    ind:['edu','hosp','creative'],
    why:'Four hundred years of stone, snow, and French spoken with joy.',
    cos:['Petit Champlain Studio','Saint-Roch Works','Montcalm Labs','Petit Champlain Collective','Saint-Roch & Co'],
+   hoods:['Petit Champlain','Saint-Roch','Montcalm'],
    f:{pop:'0.8M metro',lang:'French',rent:'$1,024',sun:'1916'}},
   {name:'Guadalajara', country:'Mexico',
    d:{pace:5,nature:5,culture:8,social:8,warmth:8,afford:7,food:9,transit:5,openness:7,scale:8,safe:3.8,div:5},
@@ -1286,6 +1371,7 @@ const CITIES = [
    ind:['tech','creative','hosp'],
    why:'Mariachi at the root, startups in the branches &mdash; Mexico&rsquo;s easygoing second city.',
    cos:['Chapultepec Studio','Americana Works','Tlaquepaque Labs','Chapultepec Collective','Americana & Co'],
+   hoods:['Chapultepec','Americana','Tlaquepaque'],
    f:{pop:'5.3M metro',lang:'Spanish',rent:'$931',sun:'2800'}},
   {name:'Oaxaca', country:'Mexico',
    d:{pace:2,nature:7,culture:10,social:7,warmth:8,afford:7,food:10,transit:4,openness:7,scale:3,safe:6.3,div:4},
@@ -1293,6 +1379,7 @@ const CITIES = [
    ind:['creative','hosp','remote'],
    why:'Mole, mezcal, and looms &mdash; craft as the city&rsquo;s heartbeat.',
    cos:['Jalatlaco Studio','Xochimilco Works','Centro Labs','Jalatlaco Collective','Xochimilco & Co'],
+   hoods:['Jalatlaco','Xochimilco','Centro'],
    f:{pop:'0.7M metro',lang:'Spanish',rent:'$550',sun:'2900'}},
   {name:'Mérida', country:'Mexico',
    d:{pace:3,nature:5,culture:8,social:7,warmth:10,afford:7,food:8,transit:4,openness:7,scale:4,safe:7.6,div:5},
@@ -1300,6 +1387,7 @@ const CITIES = [
    ind:['remote','hosp','health'],
    why:'Pastel mansions and cenote weekends in the Yucatán heat.',
    cos:['Santiago Studio','Santa Ana Works','Paseo Montejo Labs','Santiago Collective','Santa Ana & Co'],
+   hoods:['Santiago','Santa Ana','Paseo Montejo'],
    f:{pop:'1.2M metro',lang:'Spanish',rent:'$691',sun:'2600'}},
   {name:'San José', country:'Costa Rica',
    d:{pace:3,nature:9,culture:5,social:7,warmth:7,afford:6,food:7,transit:4,openness:8,scale:5,safe:4.4,div:6},
@@ -1307,6 +1395,7 @@ const CITIES = [
    ind:['remote','health','edu'],
    why:'Pura vida with cloud forests an hour away in any direction.',
    cos:['Barrio Escalante Studio','La Sabana Works','Santa Ana Labs','Barrio Escalante Collective','La Sabana & Co'],
+   hoods:['Barrio Escalante','La Sabana','Santa Ana'],
    f:{pop:'2.2M metro',lang:'Spanish',rent:'$943',sun:'2000'}},
   {name:'Panama City', country:'Panama',
    d:{pace:6,nature:6,culture:5,social:7,warmth:10,afford:6,food:7,transit:5,openness:8,scale:7,safe:5.3,div:7},
@@ -1314,6 +1403,7 @@ const CITIES = [
    ind:['finance','hosp','remote'],
    why:'A skyline meeting rainforest where two oceans nearly touch.',
    cos:['Casco Viejo Studio','San Francisco Works','El Cangrejo Labs','Casco Viejo Collective','San Francisco & Co'],
+   hoods:['Casco Viejo','San Francisco','El Cangrejo'],
    f:{pop:'1.9M metro',lang:'Spanish',rent:'$1,291',sun:'1744'}},
   {name:'San Juan', country:'Puerto Rico',
    d:{pace:4,nature:7,culture:8,social:8,warmth:10,afford:5,food:8,transit:4,openness:8,scale:5,safe:3.3,div:5},
@@ -1321,6 +1411,7 @@ const CITIES = [
    ind:['remote','hosp','creative'],
    why:'Salsa in the streets and four centuries of candy-colored walls.',
    cos:['Santurce Studio','Old San Juan Works','Condado Labs','Santurce Collective','Old San Juan & Co'],
+   hoods:['Santurce','Old San Juan','Condado'],
    f:{pop:'2.2M metro',lang:'Spanish & English',rent:'$1,813',sun:'2964'}},
   {name:'Santo Domingo', country:'Dominican Republic',
    d:{pace:5,nature:5,culture:8,social:8,warmth:10,afford:7,food:8,transit:4,openness:7,scale:7,safe:3.3,div:5},
@@ -1328,6 +1419,7 @@ const CITIES = [
    ind:['hosp','remote','trades'],
    why:'The New World&rsquo;s first city, still dancing after five centuries.',
    cos:['Zona Colonial Studio','Piantini Works','Gazcue Labs','Zona Colonial Collective','Piantini & Co'],
+   hoods:['Zona Colonial','Piantini','Gazcue'],
    f:{pop:'3.5M metro',lang:'Spanish',rent:'$736',sun:'2650'}},
   {name:'Santiago', country:'Chile',
    d:{pace:6,nature:8,culture:7,social:6,warmth:6,afford:7,food:8,transit:7,openness:6,scale:8,safe:3.6,div:6},
@@ -1335,6 +1427,7 @@ const CITIES = [
    ind:['finance','tech','edu'],
    why:'The Andes at the end of every avenue &mdash; wine country on weekends.',
    cos:['Lastarria Studio','Providencia Works','Bellavista Labs','Lastarria Collective','Providencia & Co'],
+   hoods:['Lastarria','Providencia','Bellavista'],
    f:{pop:'7.1M metro',lang:'Spanish',rent:'$570',sun:'2808'}},
   {name:'Lima', country:'Peru',
    d:{pace:6,nature:5,culture:8,social:7,warmth:6,afford:7,food:10,transit:4,openness:6,scale:9,safe:3.0,div:5},
@@ -1342,6 +1435,7 @@ const CITIES = [
    ind:['hosp','finance','creative'],
    why:'A grey-skied capital that cooks in full color &mdash; ceviche as religion.',
    cos:['Barranco Studio','Miraflores Works','San Isidro Labs','Barranco Collective','Miraflores & Co'],
+   hoods:['Barranco','Miraflores','San Isidro'],
    f:{pop:'11M metro',lang:'Spanish',rent:'$753',sun:'1230'}},
   {name:'Bogotá', country:'Colombia',
    d:{pace:6,nature:6,culture:8,social:7,warmth:3,afford:7,food:8,transit:6,openness:6,scale:9,safe:3.3,div:5},
@@ -1349,6 +1443,7 @@ const CITIES = [
    ind:['creative','tech','edu'],
    why:'High-altitude hustle &mdash; museums, mountains, and Sunday ciclovía.',
    cos:['Chapinero Studio','La Candelaria Works','Usaquén Labs','Chapinero Collective','La Candelaria & Co'],
+   hoods:['Chapinero','La Candelaria','Usaquén'],
    f:{pop:'11M metro',lang:'Spanish',rent:'$739',sun:'1328'}},
   {name:'Montevideo', country:'Uruguay',
    d:{pace:3,nature:5,culture:7,social:7,warmth:6,afford:6,food:7,transit:6,openness:8,scale:5,safe:4.3,div:5},
@@ -1356,6 +1451,7 @@ const CITIES = [
    ind:['remote','edu','creative'],
    why:'Mate on the rambla and nowhere urgent to be.',
    cos:['Ciudad Vieja Studio','Pocitos Works','Cordón Labs','Ciudad Vieja Collective','Pocitos & Co'],
+   hoods:['Ciudad Vieja','Pocitos','Cordón'],
    f:{pop:'1.8M metro',lang:'Spanish',rent:'$744',sun:'2481'}},
   {name:'São Paulo', country:'Brazil',
    d:{pace:9,nature:3,culture:9,social:8,warmth:7,afford:7,food:10,transit:7,openness:7,scale:10,safe:3.0,div:8},
@@ -1363,6 +1459,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'Brazil&rsquo;s engine room &mdash; endless food, art, and motion.',
    cos:['Vila Madalena Studio','Pinheiros Works','Jardins Labs','Vila Madalena Collective','Pinheiros & Co'],
+   hoods:['Vila Madalena','Pinheiros','Jardins'],
    f:{pop:'22M metro',lang:'Portuguese',rent:'$668',sun:'1894'}},
   {name:'Florianópolis', country:'Brazil',
    d:{pace:3,nature:9,culture:5,social:7,warmth:7,afford:7,food:7,transit:4,openness:8,scale:4,safe:5.5,div:4},
@@ -1370,6 +1467,7 @@ const CITIES = [
    ind:['remote','tech','hosp'],
    why:'Forty-two beaches and a startup scene in board shorts.',
    cos:['Lagoa Studio','Campeche Works','Santo Antônio Labs','Lagoa Collective','Campeche & Co'],
+   hoods:['Lagoa','Campeche','Santo Antônio'],
    f:{pop:'1.2M metro',lang:'Portuguese',rent:'$651',sun:'2000'}},
   {name:'Cartagena', country:'Colombia',
    d:{pace:4,nature:6,culture:8,social:8,warmth:10,afford:7,food:8,transit:4,openness:7,scale:5,safe:4.2,div:4},
@@ -1377,6 +1475,7 @@ const CITIES = [
    ind:['hosp','remote','creative'],
    why:'Caribbean heat inside coral-stone walls &mdash; color turned all the way up.',
    cos:['Getsemaní Studio','Walled City Works','Manga Labs','Getsemaní Collective','Walled City & Co'],
+   hoods:['Getsemaní','Walled City','Manga'],
    f:{pop:'1.0M metro',lang:'Spanish',rent:'$600',sun:'2600'}},
   {name:'Córdoba', country:'Argentina',
    d:{pace:4,nature:6,culture:7,social:8,warmth:7,afford:7,food:7,transit:6,openness:7,scale:6,safe:4.0,div:4},
@@ -1384,6 +1483,7 @@ const CITIES = [
    ind:['edu','tech','creative'],
    why:'Student energy under sierra skies &mdash; fernet and long debates.',
    cos:['Güemes Studio','Nueva Córdoba Works','Alta Córdoba Labs','Güemes Collective','Nueva Córdoba & Co'],
+   hoods:['Güemes','Nueva Córdoba','Alta Córdoba'],
    f:{pop:'1.6M metro',lang:'Spanish',rent:'$485',sun:'2534'}},
   {name:'Porto', country:'Portugal',
    d:{pace:3,nature:6,culture:8,social:6,warmth:6,afford:6,food:8,transit:7,openness:7,scale:4,safe:6.6,div:6},
@@ -1391,6 +1491,7 @@ const CITIES = [
    ind:['creative','tech','hosp'],
    why:'Granite hills, port-wine cellars, and the Atlantic setting the mood.',
    cos:['Ribeira Studio','Cedofeita Works','Foz Labs','Ribeira Collective','Cedofeita & Co'],
+   hoods:['Ribeira','Cedofeita','Foz'],
    f:{pop:'1.7M metro',lang:'Portuguese',rent:'$1,333',sun:'2468'}},
   {name:'Madrid', country:'Spain',
    d:{pace:7,nature:4,culture:10,social:9,warmth:7,afford:5,food:9,transit:9,openness:8,scale:9,safe:7.1,div:7},
@@ -1398,6 +1499,7 @@ const CITIES = [
    ind:['finance','creative','edu'],
    why:'Nights that outlast the streetlights &mdash; art, jamón, and open arms.',
    cos:['Malasaña Studio','Lavapiés Works','Chamberí Labs','Malasaña Collective','Lavapiés & Co'],
+   hoods:['Malasaña','Lavapiés','Chamberí'],
    f:{pop:'6.8M metro',lang:'Spanish',rent:'$1,589',sun:'2769'}},
   {name:'Seville', country:'Spain',
    d:{pace:3,nature:4,culture:9,social:9,warmth:9,afford:6,food:9,transit:6,openness:7,scale:5,safe:6.3,div:5},
@@ -1405,6 +1507,7 @@ const CITIES = [
    ind:['hosp','creative','edu'],
    why:'Orange blossoms and flamenco &mdash; heat with a heartbeat.',
    cos:['Triana Studio','Santa Cruz Works','Alameda Labs','Triana Collective','Santa Cruz & Co'],
+   hoods:['Triana','Santa Cruz','Alameda'],
    f:{pop:'1.5M metro',lang:'Spanish',rent:'$950',sun:'2918'}},
   {name:'Granada', country:'Spain',
    d:{pace:2,nature:7,culture:9,social:7,warmth:7,afford:7,food:8,transit:5,openness:6,scale:3,safe:6.8,div:5},
@@ -1412,6 +1515,7 @@ const CITIES = [
    ind:['edu','creative','hosp'],
    why:'The Alhambra above, free tapas below, the Sierra behind.',
    cos:['Albaicín Studio','Realejo Works','Sacromonte Labs','Albaicín Collective','Realejo & Co'],
+   hoods:['Albaicín','Realejo','Sacromonte'],
    f:{pop:'0.5M metro',lang:'Spanish',rent:'$886',sun:'2881'}},
   {name:'Bilbao', country:'Spain',
    d:{pace:4,nature:7,culture:8,social:6,warmth:5,afford:6,food:9,transit:7,openness:6,scale:4,safe:5.1,div:5},
@@ -1419,6 +1523,7 @@ const CITIES = [
    ind:['creative','trades','tech'],
    why:'Titanium curves over an old iron river &mdash; pintxos as fine art.',
    cos:['Casco Viejo Studio','Abando Works','Deusto Labs','Casco Viejo Collective','Abando & Co'],
+   hoods:['Casco Viejo','Abando','Deusto'],
    f:{pop:'1.0M metro',lang:'Spanish & Basque',rent:'$1,314',sun:'1584'}},
   {name:'Palma', country:'Spain',
    d:{pace:3,nature:7,culture:7,social:7,warmth:9,afford:5,food:8,transit:6,openness:7,scale:4,safe:6.4,div:7},
@@ -1426,6 +1531,7 @@ const CITIES = [
    ind:['hosp','remote','creative'],
    why:'A honey-stone old town with the Mediterranean at the end of the lane.',
    cos:['Santa Catalina Studio','La Lonja Works','Portixol Labs','Santa Catalina Collective','La Lonja & Co'],
+   hoods:['Santa Catalina','La Lonja','Portixol'],
    f:{pop:'0.6M metro',lang:'Spanish & Catalan',rent:'$1,559',sun:'2779'}},
   {name:'Marseille', country:'France',
    d:{pace:5,nature:7,culture:8,social:8,warmth:9,afford:5,food:9,transit:6,openness:6,scale:7,safe:3.3,div:8},
@@ -1433,6 +1539,7 @@ const CITIES = [
    ind:['hosp','creative','trades'],
    why:'Rowdy, sunlit, and salt-stained &mdash; France with the collar open.',
    cos:['Le Panier Studio','Vieux-Port Works','Cours Julien Labs','Le Panier Collective','Vieux-Port & Co'],
+   hoods:['Le Panier','Vieux-Port','Cours Julien'],
    f:{pop:'1.9M metro',lang:'French',rent:'$939',sun:'2836'}},
   {name:'Lyon', country:'France',
    d:{pace:5,nature:5,culture:8,social:6,warmth:5,afford:5,food:10,transit:8,openness:6,scale:6,safe:4.1,div:6},
@@ -1440,6 +1547,7 @@ const CITIES = [
    ind:['finance','tech','hosp'],
    why:'Two rivers, secret passages, and France&rsquo;s most serious kitchens.',
    cos:['Croix-Rousse Studio','Vieux Lyon Works','Confluence Labs','Croix-Rousse Collective','Vieux Lyon & Co'],
+   hoods:['Croix-Rousse','Vieux Lyon','Confluence'],
    f:{pop:'2.3M metro',lang:'French',rent:'$916',sun:'2002'}},
   {name:'Bordeaux', country:'France',
    d:{pace:4,nature:6,culture:8,social:6,warmth:6,afford:5,food:9,transit:7,openness:6,scale:5,safe:5.0,div:5},
@@ -1447,6 +1555,7 @@ const CITIES = [
    ind:['hosp','tech','creative'],
    why:'A wine capital with tram-quiet streets and ocean surf an hour west.',
    cos:['Chartrons Studio','Saint-Pierre Works','Bastide Labs','Chartrons Collective','Saint-Pierre & Co'],
+   hoods:['Chartrons','Saint-Pierre','Bastide'],
    f:{pop:'1.3M metro',lang:'French',rent:'$917',sun:'2035'}},
   {name:'Nice', country:'France',
    d:{pace:4,nature:7,culture:7,social:7,warmth:9,afford:5,food:8,transit:6,openness:7,scale:5,safe:4.5,div:6},
@@ -1454,6 +1563,7 @@ const CITIES = [
    ind:['hosp','remote','creative'],
    why:'Azure water, pastel facades, and markets that smell of lemons.',
    cos:['Vieux Nice Studio','Libération Works','Cimiez Labs','Vieux Nice Collective','Libération & Co'],
+   hoods:['Vieux Nice','Libération','Cimiez'],
    f:{pop:'1.0M metro',lang:'French',rent:'$1,161',sun:'2761'}},
   {name:'Brussels', country:'Belgium',
    d:{pace:5,nature:4,culture:8,social:6,warmth:3,afford:5,food:8,transit:8,openness:8,scale:7,safe:4.4,div:8},
@@ -1461,6 +1571,7 @@ const CITIES = [
    ind:['finance','edu','creative'],
    why:'Surreal, multilingual, and better fed than it lets on.',
    cos:['Ixelles Studio','Saint-Gilles Works','Sablon Labs','Ixelles Collective','Saint-Gilles & Co'],
+   hoods:['Ixelles','Saint-Gilles','Sablon'],
    f:{pop:'2.1M metro',lang:'French & Dutch',rent:'$1,405',sun:'1546'}},
   {name:'Antwerp', country:'Belgium',
    d:{pace:4,nature:4,culture:8,social:6,warmth:3,afford:5,food:8,transit:8,openness:7,scale:5,safe:6.0,div:7},
@@ -1468,6 +1579,7 @@ const CITIES = [
    ind:['creative','finance','trades'],
    why:'Diamonds, fashion, and a port city&rsquo;s quiet swagger.',
    cos:['Zuid Studio','Eilandje Works','Zurenborg Labs','Zuid Collective','Eilandje & Co'],
+   hoods:['Zuid','Eilandje','Zurenborg'],
    f:{pop:'1.2M metro',lang:'Dutch',rent:'$1,075',sun:'1600'}},
   {name:'Rotterdam', country:'Netherlands',
    d:{pace:5,nature:4,culture:7,social:6,warmth:3,afford:4,food:7,transit:9,openness:8,scale:6,safe:7.0,div:8},
@@ -1475,6 +1587,7 @@ const CITIES = [
    ind:['trades','creative','tech'],
    why:'Bombed flat, rebuilt bold &mdash; architecture as civic sport.',
    cos:['Witte de With Studio','Katendrecht Works','Kralingen Labs','Witte de With Collective','Katendrecht & Co'],
+   hoods:['Witte de With','Katendrecht','Kralingen'],
    f:{pop:'1.8M metro',lang:'Dutch',rent:'$1,900',sun:'1700'}},
   {name:'Utrecht', country:'Netherlands',
    d:{pace:4,nature:5,culture:7,social:6,warmth:3,afford:4,food:7,transit:10,openness:7,scale:4,safe:7.3,div:6},
@@ -1482,6 +1595,7 @@ const CITIES = [
    ind:['edu','tech','creative'],
    why:'Amsterdam&rsquo;s calmer sibling &mdash; wharf cellars and student bikes.',
    cos:['Wittevrouwen Studio','Lombok Works','Oudegracht Labs','Wittevrouwen Collective','Lombok & Co'],
+   hoods:['Wittevrouwen','Lombok','Oudegracht'],
    f:{pop:'1.4M metro',lang:'Dutch',rent:'$1,960',sun:'1660'}},
   {name:'Hamburg', country:'Germany',
    d:{pace:5,nature:5,culture:8,social:5,warmth:3,afford:5,food:8,transit:9,openness:7,scale:7,safe:5.9,div:7},
@@ -1489,6 +1603,7 @@ const CITIES = [
    ind:['trades','creative','finance'],
    why:'Harbor wind, red brick, and a port that thinks in continents.',
    cos:['Sternschanze Studio','St. Pauli Works','Ottensen Labs','Sternschanze Collective','St. Pauli & Co'],
+   hoods:['Sternschanze','St. Pauli','Ottensen'],
    f:{pop:'5.1M metro',lang:'German',rent:'$1,364',sun:'1557'}},
   {name:'Munich', country:'Germany',
    d:{pace:5,nature:7,culture:8,social:6,warmth:4,afford:4,food:8,transit:9,openness:6,scale:7,safe:7.8,div:7},
@@ -1496,6 +1611,7 @@ const CITIES = [
    ind:['tech','finance','edu'],
    why:'Beer gardens, alpine weekends, and engineering done properly.',
    cos:['Glockenbach Studio','Schwabing Works','Haidhausen Labs','Glockenbach Collective','Schwabing & Co'],
+   hoods:['Glockenbach','Schwabing','Haidhausen'],
    f:{pop:'6.2M metro',lang:'German',rent:'$1,774',sun:'1777'}},
   {name:'Cologne', country:'Germany',
    d:{pace:5,nature:4,culture:7,social:8,warmth:4,afford:5,food:7,transit:8,openness:7,scale:6,safe:5.5,div:7},
@@ -1503,6 +1619,7 @@ const CITIES = [
    ind:['creative','tech','edu'],
    why:'Carnival in the blood &mdash; Germany&rsquo;s friendliest big city.',
    cos:['Ehrenfeld Studio','Belgisches Viertel Works','Südstadt Labs','Ehrenfeld Collective','Belgisches Viertel & Co'],
+   hoods:['Ehrenfeld','Belgisches Viertel','Südstadt'],
    f:{pop:'3.6M metro',lang:'German',rent:'$1,211',sun:'1504'}},
   {name:'Leipzig', country:'Germany',
    d:{pace:4,nature:5,culture:8,social:7,warmth:4,afford:6,food:6,transit:8,openness:8,scale:5,safe:5.8,div:5},
@@ -1510,6 +1627,7 @@ const CITIES = [
    ind:['creative','edu','tech'],
    why:'Bach&rsquo;s city, now full of studios in old cotton mills.',
    cos:['Plagwitz Studio','Südvorstadt Works','Connewitz Labs','Plagwitz Collective','Südvorstadt & Co'],
+   hoods:['Plagwitz','Südvorstadt','Connewitz'],
    f:{pop:'1.5M metro',lang:'German',rent:'$815',sun:'1653'}},
   {name:'Zurich', country:'Switzerland',
    d:{pace:5,nature:8,culture:7,social:4,warmth:4,afford:0,food:8,transit:10,openness:6,scale:6,safe:7.6,div:8},
@@ -1517,6 +1635,7 @@ const CITIES = [
    ind:['finance','tech','health'],
    why:'Lake-swim lunches and watchwork precision &mdash; quality as habit.',
    cos:['Kreis 4 Studio','Seefeld Works','Wipkingen Labs','Kreis 4 Collective','Seefeld & Co'],
+   hoods:['Kreis 4','Seefeld','Wipkingen'],
    f:{pop:'1.6M metro',lang:'German',rent:'$3,106',sun:'1566'}},
   {name:'Geneva', country:'Switzerland',
    d:{pace:5,nature:8,culture:6,social:4,warmth:4,afford:1,food:7,transit:9,openness:7,scale:5,safe:7.0,div:9},
@@ -1524,6 +1643,7 @@ const CITIES = [
    ind:['finance','health','edu'],
    why:'Diplomats, watchmakers, and the Alps across the water.',
    cos:['Carouge Studio','Eaux-Vives Works','Plainpalais Labs','Carouge Collective','Eaux-Vives & Co'],
+   hoods:['Carouge','Eaux-Vives','Plainpalais'],
    f:{pop:'1.0M metro',lang:'French',rent:'$2,853',sun:'1828'}},
   {name:'Milan', country:'Italy',
    d:{pace:7,nature:4,culture:9,social:6,warmth:5,afford:4,food:9,transit:9,openness:6,scale:8,safe:4.6,div:7},
@@ -1531,6 +1651,7 @@ const CITIES = [
    ind:['creative','finance','tech'],
    why:'Aperitivo hour in the world&rsquo;s best-dressed city.',
    cos:['Brera Studio','Navigli Works','Isola Labs','Brera Collective','Navigli & Co'],
+   hoods:['Brera','Navigli','Isola'],
    f:{pop:'4.3M metro',lang:'Italian',rent:'$1,787',sun:'1915'}},
   {name:'Rome', country:'Italy',
    d:{pace:5,nature:5,culture:10,social:7,warmth:7,afford:5,food:9,transit:6,openness:6,scale:9,safe:5.3,div:6},
@@ -1538,6 +1659,7 @@ const CITIES = [
    ind:['creative','edu','hosp'],
    why:'Every corner an argument between centuries &mdash; carbonara settles it.',
    cos:['Trastevere Studio','Monti Works','Testaccio Labs','Trastevere Collective','Monti & Co'],
+   hoods:['Trastevere','Monti','Testaccio'],
    f:{pop:'4.3M metro',lang:'Italian',rent:'$1,253',sun:'2473'}},
   {name:'Florence', country:'Italy',
    d:{pace:3,nature:5,culture:10,social:6,warmth:6,afford:5,food:9,transit:6,openness:6,scale:4,safe:5.8,div:5},
@@ -1545,6 +1667,7 @@ const CITIES = [
    ind:['creative','edu','hosp'],
    why:'The Renaissance never quite left &mdash; art within arm&rsquo;s reach.',
    cos:['Oltrarno Studio','Santo Spirito Works','San Niccolò Labs','Oltrarno Collective','Santo Spirito & Co'],
+   hoods:['Oltrarno','Santo Spirito','San Niccolò'],
    f:{pop:'1.0M metro',lang:'Italian',rent:'$1,525',sun:'2268'}},
   {name:'Naples', country:'Italy',
    d:{pace:6,nature:6,culture:9,social:9,warmth:8,afford:6,food:10,transit:5,openness:6,scale:8,safe:3.8,div:4},
@@ -1552,6 +1675,7 @@ const CITIES = [
    ind:['hosp','creative','trades'],
    why:'Chaos with perfect pizza &mdash; Vesuvius keeps things honest.',
    cos:['Spaccanapoli Studio','Vomero Works','Chiaia Labs','Spaccanapoli Collective','Vomero & Co'],
+   hoods:['Spaccanapoli','Vomero','Chiaia'],
    f:{pop:'3.1M metro',lang:'Italian',rent:'$1,047',sun:'2375'}},
   {name:'Bologna', country:'Italy',
    d:{pace:4,nature:4,culture:9,social:8,warmth:5,afford:5,food:10,transit:7,openness:7,scale:5,safe:5.1,div:6},
@@ -1559,6 +1683,7 @@ const CITIES = [
    ind:['edu','creative','tech'],
    why:'Porticoes, professors, and the best ragù on earth.',
    cos:['Quadrilatero Studio','Pratello Works','Bolognina Labs','Quadrilatero Collective','Pratello & Co'],
+   hoods:['Quadrilatero','Pratello','Bolognina'],
    f:{pop:'1.0M metro',lang:'Italian',rent:'$1,185',sun:'2079'}},
   {name:'Turin', country:'Italy',
    d:{pace:4,nature:6,culture:8,social:6,warmth:5,afford:6,food:9,transit:7,openness:6,scale:6,safe:4.8,div:6},
@@ -1566,6 +1691,7 @@ const CITIES = [
    ind:['tech','creative','trades'],
    why:'Elegant grids, chocolate, and the Alps filling the avenues.',
    cos:['San Salvario Studio','Vanchiglia Works','Crocetta Labs','San Salvario Collective','Vanchiglia & Co'],
+   hoods:['San Salvario','Vanchiglia','Crocetta'],
    f:{pop:'1.7M metro',lang:'Italian',rent:'$901',sun:'2077'}},
   {name:'Palermo', country:'Italy',
    d:{pace:4,nature:6,culture:9,social:8,warmth:9,afford:6,food:10,transit:4,openness:6,scale:6,safe:5.4,div:4},
@@ -1573,6 +1699,7 @@ const CITIES = [
    ind:['hosp','creative','trades'],
    why:'Markets that shout, palazzi that whisper &mdash; Sicily at full volume.',
    cos:['Kalsa Studio','Vucciria Works','Ballarò Labs','Kalsa Collective','Vucciria & Co'],
+   hoods:['Kalsa','Vucciria','Ballarò'],
    f:{pop:'1.2M metro',lang:'Italian',rent:'$769',sun:'2530'}},
   {name:'Stockholm', country:'Sweden',
    d:{pace:5,nature:7,culture:8,social:4,warmth:2,afford:4,food:8,transit:9,openness:6,scale:6,safe:5.4,div:7},
@@ -1580,6 +1707,7 @@ const CITIES = [
    ind:['tech','creative','finance'],
    why:'An archipelago of islands, design, and disciplined cool.',
    cos:['Södermalm Studio','Vasastan Works','Östermalm Labs','Södermalm Collective','Vasastan & Co'],
+   hoods:['Södermalm','Vasastan','Östermalm'],
    f:{pop:'2.4M metro',lang:'Swedish',rent:'$1,809',sun:'1803'}},
   {name:'Gothenburg', country:'Sweden',
    d:{pace:4,nature:7,culture:7,social:5,warmth:2,afford:5,food:8,transit:8,openness:7,scale:5,safe:5.4,div:6},
@@ -1587,6 +1715,7 @@ const CITIES = [
    ind:['trades','tech','creative'],
    why:'Fika, sea fog, and a west-coast warmth Sweden keeps quiet about.',
    cos:['Haga Studio','Majorna Works','Linné Labs','Haga Collective','Majorna & Co'],
+   hoods:['Haga','Majorna','Linné'],
    f:{pop:'1.1M metro',lang:'Swedish',rent:'$1,100',sun:'1721'}},
   {name:'Oslo', country:'Norway',
    d:{pace:5,nature:9,culture:7,social:4,warmth:2,afford:3,food:7,transit:8,openness:6,scale:5,safe:6.6,div:6},
@@ -1594,6 +1723,7 @@ const CITIES = [
    ind:['finance','tech','health'],
    why:'Fjord in front, forest behind &mdash; nature on the metro line.',
    cos:['Grünerløkka Studio','Frogner Works','Tøyen Labs','Grünerløkka Collective','Frogner & Co'],
+   hoods:['Grünerløkka','Frogner','Tøyen'],
    f:{pop:'1.5M metro',lang:'Norwegian',rent:'$2,063',sun:'1668'}},
   {name:'Bergen', country:'Norway',
    d:{pace:3,nature:10,culture:6,social:5,warmth:2,afford:4,food:7,transit:7,openness:6,scale:3,safe:7.5,div:4},
@@ -1601,6 +1731,7 @@ const CITIES = [
    ind:['trades','hosp','edu'],
    why:'Seven mountains, constant drizzle, and postcard wharf houses.',
    cos:['Bryggen Studio','Sandviken Works','Møhlenpris Labs','Bryggen Collective','Sandviken & Co'],
+   hoods:['Bryggen','Sandviken','Møhlenpris'],
    f:{pop:'0.4M metro',lang:'Norwegian',rent:'$1,548',sun:'1613'}},
   {name:'Helsinki', country:'Finland',
    d:{pace:4,nature:7,culture:7,social:4,warmth:2,afford:5,food:7,transit:9,openness:6,scale:5,safe:7.5,div:5},
@@ -1608,6 +1739,7 @@ const CITIES = [
    ind:['tech','edu','creative'],
    why:'Sauna, sea ice, and design that earns its silence.',
    cos:['Kallio Studio','Punavuori Works','Töölö Labs','Kallio Collective','Punavuori & Co'],
+   hoods:['Kallio','Punavuori','Töölö'],
    f:{pop:'1.5M metro',lang:'Finnish & Swedish',rent:'$1,280',sun:'1858'}},
   {name:'Reykjavik', country:'Iceland',
    d:{pace:3,nature:10,culture:7,social:6,warmth:1,afford:2,food:7,transit:5,openness:7,scale:2,safe:7.5,div:4},
@@ -1615,6 +1747,7 @@ const CITIES = [
    ind:['remote','creative','hosp'],
    why:'Lava fields and midnight sun &mdash; a village-sized capital of stories.',
    cos:['Vesturbær Studio','Laugardalur Works','Grandi Labs','Vesturbær Collective','Laugardalur & Co'],
+   hoods:['Vesturbær','Laugardalur','Grandi'],
    f:{pop:'0.25M metro',lang:'Icelandic',rent:'$2,507',sun:'1326'}},
   {name:'Dublin', country:'Ireland',
    d:{pace:5,nature:5,culture:8,social:8,warmth:3,afford:3,food:7,transit:6,openness:9,scale:6,safe:4.6,div:7},
@@ -1622,6 +1755,7 @@ const CITIES = [
    ind:['tech','finance','edu'],
    why:'Craic is infrastructure &mdash; literature in the pubs, tech on the quays.',
    cos:['Portobello Studio','Stoneybatter Works','Ranelagh Labs','Portobello Collective','Stoneybatter & Co'],
+   hoods:['Portobello','Stoneybatter','Ranelagh'],
    f:{pop:'1.5M metro',lang:'English',rent:'$2,508',sun:'1453'}},
   {name:'Glasgow', country:'Scotland',
    d:{pace:5,nature:6,culture:8,social:8,warmth:2,afford:5,food:7,transit:7,openness:8,scale:6,safe:5.5,div:6},
@@ -1629,6 +1763,7 @@ const CITIES = [
    ind:['creative','edu','health'],
    why:'Victorian grandeur with a wicked grin &mdash; the friendliest banter in Britain.',
    cos:['West End Studio','Finnieston Works','Dennistoun Labs','West End Collective','Finnieston & Co'],
+   hoods:['West End','Finnieston','Dennistoun'],
    f:{pop:'1.9M metro',lang:'English',rent:'$1,351',sun:'1281'}},
   {name:'Manchester', country:'United Kingdom',
    d:{pace:6,nature:5,culture:8,social:8,warmth:3,afford:5,food:7,transit:7,openness:8,scale:7,safe:4.4,div:7},
@@ -1636,6 +1771,7 @@ const CITIES = [
    ind:['tech','creative','edu'],
    why:'Music city of the north &mdash; rain-soaked and self-assured.',
    cos:['Northern Quarter Studio','Ancoats Works','Chorlton Labs','Northern Quarter Collective','Ancoats & Co'],
+   hoods:['Northern Quarter','Ancoats','Chorlton'],
    f:{pop:'2.9M metro',lang:'English',rent:'$1,876',sun:'1416'}},
   {name:'Bristol', country:'United Kingdom',
    d:{pace:5,nature:6,culture:8,social:7,warmth:3,afford:4,food:8,transit:6,openness:7,scale:5,safe:5.7,div:6},
@@ -1643,6 +1779,7 @@ const CITIES = [
    ind:['creative','tech','trades'],
    why:'Street art, harbourside cider, and gentle west-country anarchy.',
    cos:['Stokes Croft Studio','Clifton Works','Southville Labs','Stokes Croft Collective','Clifton & Co'],
+   hoods:['Stokes Croft','Clifton','Southville'],
    f:{pop:'0.7M metro',lang:'English',rent:'$2,007',sun:'1587'}},
   {name:'Brighton', country:'United Kingdom',
    d:{pace:4,nature:6,culture:7,social:8,warmth:3,afford:4,food:7,transit:6,openness:8,scale:4,safe:6.0,div:6},
@@ -1650,6 +1787,7 @@ const CITIES = [
    ind:['creative','remote','tech'],
    why:'A seaside town that ran away to join the circus.',
    cos:['North Laine Studio','Kemptown Works','Hove Labs','North Laine Collective','Kemptown & Co'],
+   hoods:['North Laine','Kemptown','Hove'],
    f:{pop:'0.6M metro',lang:'English',rent:'$1,929',sun:'1750'}},
   {name:'Warsaw', country:'Poland',
    d:{pace:7,nature:4,culture:7,social:6,warmth:3,afford:6,food:7,transit:8,openness:7,scale:8,safe:7.5,div:4},
@@ -1657,6 +1795,7 @@ const CITIES = [
    ind:['finance','tech','edu'],
    why:'Rebuilt from memory, running on ambition.',
    cos:['Praga Studio','Mokotów Works','Powiśle Labs','Praga Collective','Mokotów & Co'],
+   hoods:['Praga','Mokotów','Powiśle'],
    f:{pop:'3.1M metro',lang:'Polish',rent:'$1,271',sun:'1997'}},
   {name:'Kraków', country:'Poland',
    d:{pace:4,nature:5,culture:9,social:7,warmth:3,afford:6,food:8,transit:7,openness:7,scale:5,safe:7.5,div:4},
@@ -1664,6 +1803,7 @@ const CITIES = [
    ind:['tech','edu','creative'],
    why:'Legends in the cellars, students in the squares.',
    cos:['Kazimierz Studio','Podgórze Works','Old Town Labs','Kazimierz Collective','Podgórze & Co'],
+   hoods:['Kazimierz','Podgórze','Old Town'],
    f:{pop:'1.4M metro',lang:'Polish',rent:'$946',sun:'1838'}},
   {name:'Budapest', country:'Hungary',
    d:{pace:5,nature:5,culture:9,social:7,warmth:4,afford:6,food:8,transit:8,openness:7,scale:7,safe:6.6,div:5},
@@ -1671,6 +1811,7 @@ const CITIES = [
    ind:['creative','tech','remote'],
    why:'Thermal baths and ruin bars on opposite banks of the Danube.',
    cos:['District VII Studio','Újlipótváros Works','Buda Hills Labs','District VII Collective','Újlipótváros & Co'],
+   hoods:['District VII','Újlipótváros','Buda Hills'],
    f:{pop:'3.0M metro',lang:'Hungarian',rent:'$898',sun:'1988'}},
   {name:'Bucharest', country:'Romania',
    d:{pace:6,nature:4,culture:7,social:7,warmth:5,afford:7,food:7,transit:7,openness:7,scale:8,safe:7.2,div:4},
@@ -1678,6 +1819,7 @@ const CITIES = [
    ind:['tech','finance','remote'],
    why:'Belle époque bones, brutalist shoulders, fast wifi.',
    cos:['Old Town Studio','Cotroceni Works','Floreasca Labs','Old Town Collective','Cotroceni & Co'],
+   hoods:['Old Town','Cotroceni','Floreasca'],
    f:{pop:'2.3M metro',lang:'Romanian',rent:'$717',sun:'2115'}},
   {name:'Belgrade', country:'Serbia',
    d:{pace:6,nature:5,culture:7,social:9,warmth:5,afford:6,food:8,transit:6,openness:7,scale:7,safe:6.2,div:4},
@@ -1685,6 +1827,7 @@ const CITIES = [
    ind:['creative','tech','remote'],
    why:'Splav nights where two rivers meet &mdash; hospitality at full strength.',
    cos:['Dorćol Studio','Savamala Works','Zemun Labs','Dorćol Collective','Savamala & Co'],
+   hoods:['Dorćol','Savamala','Zemun'],
    f:{pop:'1.7M metro',lang:'Serbian',rent:'$871',sun:'2112'}},
   {name:'Zagreb', country:'Croatia',
    d:{pace:4,nature:6,culture:7,social:7,warmth:4,afford:6,food:8,transit:7,openness:7,scale:5,safe:7.8,div:3},
@@ -1692,6 +1835,7 @@ const CITIES = [
    ind:['tech','creative','edu'],
    why:'Café terraces from breakfast to blue hour.',
    cos:['Tkalčićeva Studio','Trešnjevka Works','Maksimir Labs','Tkalčićeva Collective','Trešnjevka & Co'],
+   hoods:['Tkalčićeva','Trešnjevka','Maksimir'],
    f:{pop:'1.1M metro',lang:'Croatian',rent:'$894',sun:'1913'}},
   {name:'Ljubljana', country:'Slovenia',
    d:{pace:3,nature:8,culture:7,social:6,warmth:4,afford:6,food:8,transit:8,openness:7,scale:3,safe:7.8,div:4},
@@ -1699,6 +1843,7 @@ const CITIES = [
    ind:['tech','edu','creative'],
    why:'A storybook capital with dragons on the bridge and Alps in reach.',
    cos:['Trnovo Studio','Center Works','Šiška Labs','Trnovo Collective','Center & Co'],
+   hoods:['Trnovo','Center','Šiška'],
    f:{pop:'0.5M metro',lang:'Slovene',rent:'$1,090',sun:'1974'}},
   {name:'Split', country:'Croatia',
    d:{pace:4,nature:7,culture:7,social:7,warmth:8,afford:6,food:8,transit:5,openness:7,scale:4,safe:7.0,div:3},
@@ -1706,6 +1851,7 @@ const CITIES = [
    ind:['hosp','remote','trades'],
    why:'Life inside a Roman palace with the Adriatic at the door.',
    cos:['Varoš Studio','Bačvice Works','Palace Quarter Labs','Varoš Collective','Bačvice & Co'],
+   hoods:['Varoš','Bačvice','Palace Quarter'],
    f:{pop:'0.3M metro',lang:'Croatian',rent:'$1,036',sun:'2631'}},
   {name:'Thessaloniki', country:'Greece',
    d:{pace:5,nature:5,culture:9,social:9,warmth:7,afford:6,food:10,transit:5,openness:7,scale:6,safe:4.8,div:4},
@@ -1713,6 +1859,7 @@ const CITIES = [
    ind:['edu','hosp','creative'],
    why:'Byzantine walls, student cafés, and the best meze in Greece.',
    cos:['Ladadika Studio','Ano Poli Works','Valaoritou Labs','Ladadika Collective','Ano Poli & Co'],
+   hoods:['Ladadika','Ano Poli','Valaoritou'],
    f:{pop:'1.1M metro',lang:'Greek',rent:'$641',sun:'2660'}},
   {name:'Tallinn', country:'Estonia',
    d:{pace:4,nature:6,culture:8,social:5,warmth:2,afford:6,food:7,transit:8,openness:8,scale:4,safe:7.8,div:5},
@@ -1720,6 +1867,7 @@ const CITIES = [
    ind:['tech','remote','creative'],
    why:'Medieval towers with e-residency &mdash; the digital Hansa.',
    cos:['Kalamaja Studio','Old Town Works','Telliskivi Labs','Kalamaja Collective','Old Town & Co'],
+   hoods:['Kalamaja','Old Town','Telliskivi'],
    f:{pop:'0.6M metro',lang:'Estonian',rent:'$842',sun:'1923'}},
   {name:'Riga', country:'Latvia',
    d:{pace:4,nature:6,culture:8,social:6,warmth:2,afford:6,food:7,transit:7,openness:7,scale:5,safe:6.3,div:5},
@@ -1727,6 +1875,7 @@ const CITIES = [
    ind:['tech','creative','trades'],
    why:'Art nouveau facades over Baltic grit.',
    cos:['Miera iela Studio','Āgenskalns Works','Centrs Labs','Miera iela Collective','Āgenskalns & Co'],
+   hoods:['Miera iela','Āgenskalns','Centrs'],
    f:{pop:'0.9M metro',lang:'Latvian',rent:'$601',sun:'1754'}},
   {name:'Vilnius', country:'Lithuania',
    d:{pace:4,nature:6,culture:8,social:6,warmth:2,afford:6,food:7,transit:7,openness:8,scale:4,safe:7.1,div:4},
@@ -1734,6 +1883,7 @@ const CITIES = [
    ind:['tech','edu','creative'],
    why:'A baroque old town with a self-declared republic of artists inside.',
    cos:['Užupis Studio','Old Town Works','Žvėrynas Labs','Užupis Collective','Old Town & Co'],
+   hoods:['Užupis','Old Town','Žvėrynas'],
    f:{pop:'0.7M metro',lang:'Lithuanian',rent:'$874',sun:'1691'}},
   {name:'Tbilisi', country:'Georgia',
    d:{pace:4,nature:7,culture:8,social:8,warmth:6,afford:7,food:9,transit:6,openness:8,scale:6,safe:7.4,div:4},
@@ -1741,6 +1891,7 @@ const CITIES = [
    ind:['remote','creative','hosp'],
    why:'Supra feasts, sulfur baths, and balconies leaning into the past.',
    cos:['Vera Studio','Sololaki Works','Fabrika Labs','Vera Collective','Sololaki & Co'],
+   hoods:['Vera','Sololaki','Fabrika'],
    f:{pop:'1.2M metro',lang:'Georgian',rent:'$703',sun:'2046'}},
   {name:'Istanbul', country:'Turkey',
    d:{pace:8,nature:5,culture:10,social:8,warmth:6,afford:6,food:10,transit:7,openness:6,scale:10,safe:5.2,div:7},
@@ -1748,6 +1899,7 @@ const CITIES = [
    ind:['creative','finance','hosp'],
    why:'Two continents, ten thousand ferries, tea at every threshold.',
    cos:['Kadıköy Studio','Beyoğlu Works','Balat Labs','Kadıköy Collective','Beyoğlu & Co'],
+   hoods:['Kadıköy','Beyoğlu','Balat'],
    f:{pop:'16M metro',lang:'Turkish',rent:'$985',sun:'2026'}},
   {name:'Izmir', country:'Turkey',
    d:{pace:5,nature:6,culture:7,social:8,warmth:8,afford:7,food:9,transit:6,openness:7,scale:7,safe:6.7,div:5},
@@ -1755,6 +1907,7 @@ const CITIES = [
    ind:['tech','hosp','remote'],
    why:'The Aegean&rsquo;s liberal port &mdash; kordon sunsets and easy manners.',
    cos:['Alsancak Studio','Karşıyaka Works','Bornova Labs','Alsancak Collective','Karşıyaka & Co'],
+   hoods:['Alsancak','Karşıyaka','Bornova'],
    f:{pop:'4.4M metro',lang:'Turkish',rent:'$619',sun:'2917'}},
   {name:'Valletta', country:'Malta',
    d:{pace:3,nature:5,culture:8,social:7,warmth:9,afford:5,food:8,transit:6,openness:8,scale:2,safe:7.2,div:6},
@@ -1762,6 +1915,7 @@ const CITIES = [
    ind:['remote','finance','hosp'],
    why:'A fortress city the size of a neighborhood, honey-gold at dusk.',
    cos:['Strait Street Studio','Floriana Works','Sliema Labs','Strait Street Collective','Floriana & Co'],
+   hoods:['Strait Street','Floriana','Sliema'],
    f:{pop:'0.5M metro',lang:'Maltese & English',rent:'$1,300',sun:'3054'}},
   {name:'Funchal', country:'Portugal',
    d:{pace:2,nature:9,culture:6,social:6,warmth:8,afford:6,food:7,transit:5,openness:7,scale:3,safe:7.8,div:4},
@@ -1769,6 +1923,7 @@ const CITIES = [
    ind:['remote','hosp','health'],
    why:'Levada walks above, harbor lights below &mdash; eternal spring, mid-Atlantic.',
    cos:['Old Town Studio','Lido Works','Monte Labs','Old Town Collective','Lido & Co'],
+   hoods:['Old Town','Lido','Monte'],
    f:{pop:'0.25M metro',lang:'Portuguese',rent:'$1,560',sun:'2310'}},
   {name:'Marrakesh', country:'Morocco',
    d:{pace:4,nature:6,culture:9,social:7,warmth:10,afford:8,food:9,transit:4,openness:7,scale:5,safe:5.5,div:5},
@@ -1776,6 +1931,7 @@ const CITIES = [
    ind:['hosp','creative','remote'],
    why:'Ochre walls, mint tea, and the Atlas shimmering beyond the souks.',
    cos:['The Medina Studio','Gueliz Works','Hivernage Labs','The Medina Collective','Gueliz & Co'],
+   hoods:['The Medina','Gueliz','Hivernage'],
    f:{pop:'1.0M metro',lang:'Arabic & French',rent:'$506',sun:'3131'}},
   {name:'Casablanca', country:'Morocco',
    d:{pace:6,nature:4,culture:6,social:7,warmth:8,afford:8,food:8,transit:5,openness:6,scale:7,safe:4.5,div:5},
@@ -1783,6 +1939,7 @@ const CITIES = [
    ind:['finance','trades','hosp'],
    why:'Morocco&rsquo;s working heart &mdash; deco boulevards and ocean spray.',
    cos:['Habous Studio','Gauthier Works','Ain Diab Labs','Habous Collective','Gauthier & Co'],
+   hoods:['Habous','Gauthier','Ain Diab'],
    f:{pop:'3.7M metro',lang:'Arabic & French',rent:'$647',sun:'3000'}},
   {name:'Accra', country:'Ghana',
    d:{pace:6,nature:5,culture:7,social:8,warmth:9,afford:7,food:8,transit:4,openness:7,scale:7,safe:5.2,div:5},
@@ -1790,6 +1947,7 @@ const CITIES = [
    ind:['tech','creative','trades'],
    why:'Highlife, hustle, and the Gulf of Guinea keeping time.',
    cos:['Osu Studio','Jamestown Works','Labone Labs','Osu Collective','Jamestown & Co'],
+   hoods:['Osu','Jamestown','Labone'],
    f:{pop:'2.6M metro',lang:'English',rent:'$692',sun:'2432'}},
   {name:'Lagos', country:'Nigeria',
    d:{pace:9,nature:4,culture:8,social:9,warmth:9,afford:7,food:8,transit:3,openness:7,scale:10,safe:3.1,div:5},
@@ -1797,6 +1955,7 @@ const CITIES = [
    ind:['tech','finance','creative'],
    why:'Afrobeats at planetary volume &mdash; energy that bends the grid.',
    cos:['Lekki Studio','Yaba Works','Victoria Island Labs','Lekki Collective','Yaba & Co'],
+   hoods:['Lekki','Yaba','Victoria Island'],
    f:{pop:'16M metro',lang:'English',rent:'$731',sun:'1845'}},
   {name:'Nairobi', country:'Kenya',
    d:{pace:6,nature:8,culture:6,social:7,warmth:6,afford:8,food:7,transit:4,openness:7,scale:8,safe:4.1,div:6},
@@ -1804,6 +1963,7 @@ const CITIES = [
    ind:['tech','health','remote'],
    why:'Silicon Savannah &mdash; giraffes at the city limits, startups downtown.',
    cos:['Westlands Studio','Karen Works','Kilimani Labs','Westlands Collective','Karen & Co'],
+   hoods:['Westlands','Karen','Kilimani'],
    f:{pop:'5.0M metro',lang:'English & Swahili',rent:'$421',sun:'2492'}},
   {name:'Kigali', country:'Rwanda',
    d:{pace:4,nature:8,culture:5,social:6,warmth:6,afford:8,food:6,transit:5,openness:8,scale:5,safe:7.2,div:4},
@@ -1811,6 +1971,7 @@ const CITIES = [
    ind:['tech','health','edu'],
    why:'A thousand hills, spotless streets, and quiet determination.',
    cos:['Kiyovu Studio','Nyamirambo Works','Kimihurura Labs','Kiyovu Collective','Nyamirambo & Co'],
+   hoods:['Kiyovu','Nyamirambo','Kimihurura'],
    f:{pop:'1.2M metro',lang:'Kinyarwanda & English',rent:'$672',sun:'2000'}},
   {name:'Johannesburg', country:'South Africa',
    d:{pace:7,nature:6,culture:7,social:8,warmth:7,afford:7,food:7,transit:3,openness:7,scale:9,safe:1.9,div:7},
@@ -1818,6 +1979,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'Gold-rush bones, jacaranda springs, and serious creative muscle.',
    cos:['Maboneng Studio','Melville Works','Rosebank Labs','Maboneng Collective','Melville & Co'],
+   hoods:['Maboneng','Melville','Rosebank'],
    f:{pop:'6.0M metro',lang:'English & Zulu',rent:'$524',sun:'3124'}},
   {name:'Cairo', country:'Egypt',
    d:{pace:8,nature:3,culture:10,social:8,warmth:10,afford:8,food:8,transit:4,openness:6,scale:10,safe:5.0,div:4},
@@ -1825,6 +1987,7 @@ const CITIES = [
    ind:['edu','finance','creative'],
    why:'Five thousand years of city, still refusing to sleep.',
    cos:['Zamalek Studio','Maadi Works','Downtown Labs','Zamalek Collective','Maadi & Co'],
+   hoods:['Zamalek','Maadi','Downtown'],
    f:{pop:'22M metro',lang:'Arabic',rent:'$225',sun:'3542'}},
   {name:'Tel Aviv', country:'Israel',
    d:{pace:8,nature:5,culture:8,social:9,warmth:9,afford:2,food:9,transit:5,openness:8,scale:7,safe:7.4,div:7},
@@ -1832,6 +1995,7 @@ const CITIES = [
    ind:['tech','creative','finance'],
    why:'Bauhaus by the beach &mdash; startups by day, boulevards all night.',
    cos:['Florentin Studio','Neve Tzedek Works','Rothschild Labs','Florentin Collective','Neve Tzedek & Co'],
+   hoods:['Florentin','Neve Tzedek','Rothschild'],
    f:{pop:'4.4M metro',lang:'Hebrew',rent:'$2,242',sun:'3311'}},
   {name:'Doha', country:'Qatar',
    d:{pace:6,nature:3,culture:6,social:5,warmth:10,afford:5,food:7,transit:6,openness:8,scale:7,safe:8.5,div:9},
@@ -1839,6 +2003,7 @@ const CITIES = [
    ind:['finance','edu','health'],
    why:'A pearl-diving village that grew a skyline overnight.',
    cos:['Msheireb Studio','West Bay Works','Katara Labs','Msheireb Collective','West Bay & Co'],
+   hoods:['Msheireb','West Bay','Katara'],
    f:{pop:'2.4M metro',lang:'Arabic & English',rent:'$1,918',sun:'3400'}},
   {name:'Abu Dhabi', country:'United Arab Emirates',
    d:{pace:6,nature:4,culture:6,social:5,warmth:10,afford:5,food:7,transit:5,openness:8,scale:7,safe:8.9,div:9},
@@ -1846,6 +2011,7 @@ const CITIES = [
    ind:['finance','health','edu'],
    why:'Calmer than its neighbor &mdash; museums rising from the sand.',
    cos:['The Corniche Studio','Saadiyat Works','Al Zahiyah Labs','The Corniche Collective','Saadiyat & Co'],
+   hoods:['The Corniche','Saadiyat','Al Zahiyah'],
    f:{pop:'1.5M metro',lang:'Arabic & English',rent:'$1,967',sun:'3500'}},
   {name:'Muscat', country:'Oman',
    d:{pace:3,nature:7,culture:7,social:5,warmth:10,afford:7,food:7,transit:4,openness:7,scale:4,safe:8.1,div:6},
@@ -1853,6 +2019,7 @@ const CITIES = [
    ind:['trades','hosp','health'],
    why:'Frankincense air and mountains meeting a turquoise gulf.',
    cos:['Muttrah Studio','Qurum Works','Ruwi Labs','Muttrah Collective','Qurum & Co'],
+   hoods:['Muttrah','Qurum','Ruwi'],
    f:{pop:'1.6M metro',lang:'Arabic',rent:'$680',sun:'3493'}},
   {name:'Osaka', country:'Japan',
    d:{pace:7,nature:4,culture:8,social:9,warmth:7,afford:7,food:10,transit:9,openness:5,scale:9,safe:6.7,div:3},
@@ -1860,6 +2027,7 @@ const CITIES = [
    ind:['hosp','trades','tech'],
    why:'Japan&rsquo;s kitchen &mdash; comedy, neon, and zero pretension.',
    cos:['Namba Studio','Nakazakicho Works','Tennoji Labs','Namba Collective','Nakazakicho & Co'],
+   hoods:['Namba','Nakazakicho','Tennoji'],
    f:{pop:'19M metro',lang:'Japanese',rent:'$697',sun:'2048'}},
   {name:'Kyoto', country:'Japan',
    d:{pace:3,nature:7,culture:10,social:5,warmth:6,afford:7,food:9,transit:7,openness:5,scale:6,safe:8.0,div:2},
@@ -1867,6 +2035,7 @@ const CITIES = [
    ind:['creative','edu','hosp'],
    why:'Two thousand temples keeping time by moss and maple.',
    cos:['Gion Studio','Arashiyama Works','Demachiyanagi Labs','Gion Collective','Arashiyama & Co'],
+   hoods:['Gion','Arashiyama','Demachiyanagi'],
    f:{pop:'3.8M metro',lang:'Japanese',rent:'$700',sun:'1775'}},
   {name:'Fukuoka', country:'Japan',
    d:{pace:5,nature:6,culture:7,social:7,warmth:7,afford:7,food:9,transit:7,openness:6,scale:6,safe:7.8,div:2},
@@ -1874,6 +2043,7 @@ const CITIES = [
    ind:['tech','hosp','trades'],
    why:'Ramen stalls by the bay &mdash; Japan&rsquo;s easiest big city.',
    cos:['Daimyo Studio','Yakuin Works','Ohori Labs','Daimyo Collective','Yakuin & Co'],
+   hoods:['Daimyo','Yakuin','Ohori'],
    f:{pop:'2.6M metro',lang:'Japanese',rent:'$550',sun:'1889'}},
   {name:'Sapporo', country:'Japan',
    d:{pace:4,nature:8,culture:6,social:6,warmth:2,afford:7,food:9,transit:6,openness:5,scale:6,safe:7.8,div:2},
@@ -1881,6 +2051,7 @@ const CITIES = [
    ind:['trades','hosp','tech'],
    why:'Powder snow, beer, and wide northern streets.',
    cos:['Susukino Studio','Maruyama Works','Odori Labs','Susukino Collective','Maruyama & Co'],
+   hoods:['Susukino','Maruyama','Odori'],
    f:{pop:'2.7M metro',lang:'Japanese',rent:'$500',sun:'1740'}},
   {name:'Busan', country:'South Korea',
    d:{pace:5,nature:7,culture:7,social:7,warmth:6,afford:6,food:9,transit:7,openness:5,scale:8,safe:7.5,div:2},
@@ -1888,6 +2059,7 @@ const CITIES = [
    ind:['trades','hosp','tech'],
    why:'Mountains dropping into harbors &mdash; Korea with sand between its toes.',
    cos:['Haeundae Studio','Jeonpo Works','Gwangalli Labs','Haeundae Collective','Jeonpo & Co'],
+   hoods:['Haeundae','Jeonpo','Gwangalli'],
    f:{pop:'3.4M metro',lang:'Korean',rent:'$600',sun:'2327'}},
   {name:'Shanghai', country:'China',
    d:{pace:9,nature:3,culture:8,social:7,warmth:6,afford:7,food:9,transit:9,openness:6,scale:10,safe:7.3,div:4},
@@ -1895,6 +2067,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'Deco towers and maglev speed &mdash; the future, already busy.',
    cos:['French Concession Studio','Jingan Works','Xuhui Labs','French Concession Collective','Jingan & Co'],
+   hoods:['French Concession','Jingan','Xuhui'],
    f:{pop:'27M metro',lang:'Mandarin',rent:'$948',sun:'1776'}},
   {name:'Beijing', country:'China',
    d:{pace:8,nature:4,culture:10,social:6,warmth:4,afford:7,food:8,transit:8,openness:4,scale:10,safe:7.4,div:3},
@@ -1902,6 +2075,7 @@ const CITIES = [
    ind:['edu','tech','finance'],
    why:'Hutong lanes in the shadow of empire &mdash; history at imperial scale.',
    cos:['Gulou Studio','Sanlitun Works','Wudaokou Labs','Gulou Collective','Sanlitun & Co'],
+   hoods:['Gulou','Sanlitun','Wudaokou'],
    f:{pop:'21M metro',lang:'Mandarin',rent:'$954',sun:'2671'}},
   {name:'Shenzhen', country:'China',
    d:{pace:10,nature:5,culture:5,social:6,warmth:9,afford:7,food:8,transit:9,openness:6,scale:10,safe:7.5,div:4},
@@ -1909,6 +2083,7 @@ const CITIES = [
    ind:['tech','finance','trades'],
    why:'A fishing village that became the world&rsquo;s hardware lab in one lifetime.',
    cos:['Nanshan Studio','Futian Works','OCT Loft Labs','Nanshan Collective','Futian & Co'],
+   hoods:['Nanshan','Futian','OCT Loft'],
    f:{pop:'17M metro',lang:'Mandarin',rent:'$732',sun:'1900'}},
   {name:'Chengdu', country:'China',
    d:{pace:4,nature:6,culture:8,social:8,warmth:5,afford:8,food:10,transit:7,openness:6,scale:9,safe:7.5,div:2},
@@ -1916,6 +2091,7 @@ const CITIES = [
    ind:['tech','creative','hosp'],
    why:'Teahouse afternoons, hotpot nights, pandas up the road.',
    cos:['Yulin Studio','Kuanzhai Works','Jinli Labs','Yulin Collective','Kuanzhai & Co'],
+   hoods:['Yulin','Kuanzhai','Jinli'],
    f:{pop:'21M metro',lang:'Mandarin',rent:'$470',sun:'1073'}},
   {name:'Hong Kong', country:'Hong Kong',
    d:{pace:9,nature:7,culture:8,social:6,warmth:8,afford:3,food:10,transit:10,openness:7,scale:9,safe:7.8,div:8},
@@ -1923,6 +2099,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'Peak trams and dim sum &mdash; density done with style.',
    cos:['Sheung Wan Studio','Sai Ying Pun Works','Kowloon Labs','Sheung Wan Collective','Sai Ying Pun & Co'],
+   hoods:['Sheung Wan','Sai Ying Pun','Kowloon'],
    f:{pop:'7.5M',lang:'Cantonese & English',rent:'$2,236',sun:'1836'}},
   {name:'Hanoi', country:'Vietnam',
    d:{pace:6,nature:5,culture:9,social:7,warmth:7,afford:8,food:10,transit:4,openness:6,scale:8,safe:6.6,div:2},
@@ -1930,6 +2107,7 @@ const CITIES = [
    ind:['remote','creative','hosp'],
    why:'Motorbike rivers around a quiet lake &mdash; phở before sunrise.',
    cos:['Old Quarter Studio','Tay Ho Works','Ba Dinh Labs','Old Quarter Collective','Tay Ho & Co'],
+   hoods:['Old Quarter','Tay Ho','Ba Dinh'],
    f:{pop:'8.4M metro',lang:'Vietnamese',rent:'$414',sun:'1466'}},
   {name:'Ho Chi Minh City', country:'Vietnam',
    d:{pace:8,nature:4,culture:7,social:8,warmth:10,afford:8,food:10,transit:4,openness:7,scale:10,safe:5.0,div:3},
@@ -1937,6 +2115,7 @@ const CITIES = [
    ind:['tech','remote','hosp'],
    why:'Saigon runs on iced coffee and momentum.',
    cos:['Thao Dien Studio','District 1 Works','District 3 Labs','Thao Dien Collective','District 1 & Co'],
+   hoods:['Thao Dien','District 1','District 3'],
    f:{pop:'9.3M metro',lang:'Vietnamese',rent:'$573',sun:'2489'}},
   {name:'Da Nang', country:'Vietnam',
    d:{pace:4,nature:8,culture:5,social:6,warmth:9,afford:8,food:9,transit:4,openness:8,scale:5,safe:6.8,div:4},
@@ -1944,6 +2123,7 @@ const CITIES = [
    ind:['remote','hosp','tech'],
    why:'Beach mornings, mountain passes, remote-work afternoons.',
    cos:['An Thuong Studio','My Khe Works','Son Tra Labs','An Thuong Collective','My Khe & Co'],
+   hoods:['An Thuong','My Khe','Son Tra'],
    f:{pop:'1.2M metro',lang:'Vietnamese',rent:'$519',sun:'2182'}},
   {name:'Phnom Penh', country:'Cambodia',
    d:{pace:5,nature:4,culture:7,social:7,warmth:10,afford:7,food:8,transit:3,openness:8,scale:6,safe:5.0,div:4},
@@ -1951,6 +2131,7 @@ const CITIES = [
    ind:['remote','hosp','trades'],
    why:'Riverfront gold and moto dust &mdash; a capital finding its stride.',
    cos:['BKK1 Studio','Riverside Works','Russian Market Labs','BKK1 Collective','Riverside & Co'],
+   hoods:['BKK1','Riverside','Russian Market'],
    f:{pop:'2.3M metro',lang:'Khmer',rent:'$618',sun:'2700'}},
   {name:'Kuala Lumpur', country:'Malaysia',
    d:{pace:6,nature:5,culture:7,social:7,warmth:10,afford:7,food:9,transit:7,openness:8,scale:8,safe:4.1,div:8},
@@ -1958,6 +2139,7 @@ const CITIES = [
    ind:['tech','finance','hosp'],
    why:'Three cuisines arguing deliciously beneath the towers.',
    cos:['Bangsar Studio','Chow Kit Works','KLCC Labs','Bangsar Collective','Chow Kit & Co'],
+   hoods:['Bangsar','Chow Kit','KLCC'],
    f:{pop:'8.6M metro',lang:'Malay & English',rent:'$611',sun:'2124'}},
   {name:'Penang', country:'Malaysia',
    d:{pace:3,nature:6,culture:9,social:7,warmth:10,afford:8,food:10,transit:4,openness:8,scale:4,safe:7.1,div:7},
@@ -1965,6 +2147,7 @@ const CITIES = [
    ind:['remote','hosp','creative'],
    why:'Street art and street food sharing the same shophouse walls.',
    cos:['George Town Studio','Tanjong Tokong Works','Air Itam Labs','George Town Collective','Tanjong Tokong & Co'],
+   hoods:['George Town','Tanjong Tokong','Air Itam'],
    f:{pop:'0.8M metro',lang:'Malay & English',rent:'$408',sun:'2480'}},
   {name:'Jakarta', country:'Indonesia',
    d:{pace:8,nature:3,culture:7,social:8,warmth:10,afford:8,food:9,transit:5,openness:7,scale:10,safe:4.7,div:5},
@@ -1972,6 +2155,7 @@ const CITIES = [
    ind:['finance','tech','creative'],
    why:'A megacity&rsquo;s worth of warmth stuck in traffic together.',
    cos:['Kemang Studio','Menteng Works','SCBD Labs','Kemang Collective','Menteng & Co'],
+   hoods:['Kemang','Menteng','SCBD'],
    f:{pop:'33M metro',lang:'Indonesian',rent:'$369',sun:'2983'}},
   {name:'Canggu', country:'Indonesia',
    d:{pace:2,nature:8,culture:5,social:8,warmth:10,afford:7,food:8,transit:3,openness:9,scale:3,safe:6.2,div:7},
@@ -1979,6 +2163,7 @@ const CITIES = [
    ind:['remote','creative','hosp'],
    why:'Rice terraces, surf breaks, and half the world&rsquo;s laptops.',
    cos:['Batu Bolong Studio','Berawa Works','Pererenan Labs','Batu Bolong Collective','Berawa & Co'],
+   hoods:['Batu Bolong','Berawa','Pererenan'],
    f:{pop:'0.1M',lang:'Indonesian',rent:'$383',sun:'2700'}},
   {name:'Manila', country:'Philippines',
    d:{pace:8,nature:3,culture:7,social:9,warmth:10,afford:7,food:8,transit:4,openness:8,scale:10,safe:3.5,div:5},
@@ -1986,6 +2171,7 @@ const CITIES = [
    ind:['tech','finance','hosp'],
    why:'Karaoke-hearted and typhoon-tough &mdash; warmth you can lean on.',
    cos:['Poblacion Studio','BGC Works','Intramuros Labs','Poblacion Collective','BGC & Co'],
+   hoods:['Poblacion','BGC','Intramuros'],
    f:{pop:'24M metro',lang:'Filipino & English',rent:'$539',sun:'2103'}},
   {name:'Cebu', country:'Philippines',
    d:{pace:5,nature:7,culture:6,social:8,warmth:10,afford:8,food:8,transit:3,openness:8,scale:6,safe:5.1,div:4},
@@ -1993,6 +2179,7 @@ const CITIES = [
    ind:['remote','tech','hosp'],
    why:'An island city &mdash; reefs on weekends, night shifts for the world.',
    cos:['IT Park Studio','Lahug Works','Mactan Labs','IT Park Collective','Lahug & Co'],
+   hoods:['IT Park','Lahug','Mactan'],
    f:{pop:'3.0M metro',lang:'Cebuano & English',rent:'$504',sun:'2100'}},
   {name:'Mumbai', country:'India',
    d:{pace:10,nature:4,culture:9,social:8,warmth:9,afford:8,food:9,transit:6,openness:7,scale:10,safe:5.6,div:6},
@@ -2000,6 +2187,7 @@ const CITIES = [
    ind:['finance','creative','tech'],
    why:'Bollywood, dabbawalas, and dreams packed shoulder to shoulder.',
    cos:['Bandra Studio','Colaba Works','Lower Parel Labs','Bandra Collective','Colaba & Co'],
+   hoods:['Bandra','Colaba','Lower Parel'],
    f:{pop:'21M metro',lang:'Hindi, Marathi & English',rent:'$644',sun:'2584'}},
   {name:'Delhi', country:'India',
    d:{pace:8,nature:4,culture:10,social:7,warmth:8,afford:8,food:9,transit:6,openness:5,scale:10,safe:4.1,div:5},
@@ -2007,6 +2195,7 @@ const CITIES = [
    ind:['edu','finance','creative'],
    why:'Seven cities deep &mdash; empires layered like parathas.',
    cos:['Hauz Khas Studio','Connaught Place Works','Shahpur Jat Labs','Hauz Khas Collective','Connaught Place & Co'],
+   hoods:['Hauz Khas','Connaught Place','Shahpur Jat'],
    f:{pop:'32M metro',lang:'Hindi & English',rent:'$274',sun:'2685'}},
   {name:'Bengaluru', country:'India',
    d:{pace:7,nature:6,culture:7,social:7,warmth:6,afford:8,food:8,transit:4,openness:8,scale:10,safe:4.6,div:6},
@@ -2014,6 +2203,7 @@ const CITIES = [
    ind:['tech','edu','health'],
    why:'India&rsquo;s garden-city code engine &mdash; filter coffee and cool evenings.',
    cos:['Indiranagar Studio','Koramangala Works','Malleswaram Labs','Indiranagar Collective','Koramangala & Co'],
+   hoods:['Indiranagar','Koramangala','Malleswaram'],
    f:{pop:'13M metro',lang:'Kannada & English',rent:'$321',sun:'2361'}},
   {name:'Colombo', country:'Sri Lanka',
    d:{pace:5,nature:6,culture:7,social:7,warmth:10,afford:8,food:8,transit:4,openness:7,scale:6,safe:5.7,div:4},
@@ -2021,6 +2211,7 @@ const CITIES = [
    ind:['remote','trades','hosp'],
    why:'Ocean trains, king coconut, and colonial verandas.',
    cos:['Cinnamon Gardens Studio','Fort Works','Mount Lavinia Labs','Cinnamon Gardens Collective','Fort & Co'],
+   hoods:['Cinnamon Gardens','Fort','Mount Lavinia'],
    f:{pop:'2.4M metro',lang:'Sinhala, Tamil & English',rent:'$554',sun:'2621'}},
   {name:'Kathmandu', country:'Nepal',
    d:{pace:4,nature:9,culture:9,social:7,warmth:5,afford:8,food:7,transit:3,openness:7,scale:6,safe:6.4,div:4},
@@ -2028,6 +2219,7 @@ const CITIES = [
    ind:['remote','creative','edu'],
    why:'Prayer flags over brick lanes &mdash; the Himalaya on the horizon.',
    cos:['Thamel Studio','Patan Works','Boudha Labs','Thamel Collective','Patan & Co'],
+   hoods:['Thamel','Patan','Boudha'],
    f:{pop:'3.0M metro',lang:'Nepali',rent:'$222',sun:'2214'}},
   {name:'Almaty', country:'Kazakhstan',
    d:{pace:5,nature:9,culture:6,social:6,warmth:4,afford:7,food:7,transit:6,openness:6,scale:7,safe:4.7,div:6},
@@ -2035,6 +2227,7 @@ const CITIES = [
    ind:['tech','finance','edu'],
    why:'Apple orchards and alpine ridges at the edge of the steppe.',
    cos:['Golden Quarter Studio','Kok-Tobe Works','Medeu Labs','Golden Quarter Collective','Kok-Tobe & Co'],
+   hoods:['Golden Quarter','Kok-Tobe','Medeu'],
    f:{pop:'2.2M metro',lang:'Kazakh & Russian',rent:'$801',sun:'2356'}},
   {name:'Brisbane', country:'Australia',
    d:{pace:5,nature:7,culture:6,social:7,warmth:9,afford:4,food:7,transit:6,openness:8,scale:7,safe:6.2,div:8},
@@ -2042,6 +2235,7 @@ const CITIES = [
    ind:['tech','health','trades'],
    why:'River bends, jacarandas, and a winter that forgets to arrive.',
    cos:['West End Studio','Fortitude Valley Works','New Farm Labs','West End Collective','Fortitude Valley & Co'],
+   hoods:['West End','Fortitude Valley','New Farm'],
    f:{pop:'2.7M metro',lang:'English',rent:'$2,071',sun:'2968'}},
   {name:'Perth', country:'Australia',
    d:{pace:4,nature:8,culture:5,social:6,warmth:9,afford:4,food:7,transit:5,openness:8,scale:6,safe:5.8,div:8},
@@ -2049,6 +2243,7 @@ const CITIES = [
    ind:['trades','health','tech'],
    why:'The world&rsquo;s most remote big city &mdash; beaches all to yourself.',
    cos:['Fremantle Studio','Northbridge Works','Leederville Labs','Fremantle Collective','Northbridge & Co'],
+   hoods:['Fremantle','Northbridge','Leederville'],
    f:{pop:'2.2M metro',lang:'English',rent:'$1,951',sun:'3230'}},
   {name:'Adelaide', country:'Australia',
    d:{pace:3,nature:7,culture:7,social:6,warmth:7,afford:4,food:8,transit:5,openness:8,scale:5,safe:6.7,div:7},
@@ -2056,6 +2251,7 @@ const CITIES = [
    ind:['health','edu','trades'],
    why:'Festivals, wine hills, and twenty minutes to everything.',
    cos:['North Adelaide Studio','Norwood Works','Glenelg Labs','North Adelaide Collective','Norwood & Co'],
+   hoods:['North Adelaide','Norwood','Glenelg'],
    f:{pop:'1.4M metro',lang:'English',rent:'$1,804',sun:'2765'}},
   {name:'Hobart', country:'Australia',
    d:{pace:2,nature:9,culture:7,social:5,warmth:4,afford:4,food:8,transit:4,openness:7,scale:3,safe:6.6,div:5},
@@ -2063,6 +2259,7 @@ const CITIES = [
    ind:['creative','hosp','trades'],
    why:'Island light, wild art, and a mountain over the harbor.',
    cos:['Battery Point Studio','Salamanca Works','North Hobart Labs','Battery Point Collective','Salamanca & Co'],
+   hoods:['Battery Point','Salamanca','North Hobart'],
    f:{pop:'0.25M metro',lang:'English',rent:'$1,863',sun:'2336'}},
   {name:'Wellington', country:'New Zealand',
    d:{pace:4,nature:8,culture:8,social:6,warmth:3,afford:5,food:8,transit:7,openness:8,scale:4,safe:6.7,div:8},
@@ -2070,6 +2267,7 @@ const CITIES = [
    ind:['creative','tech','edu'],
    why:'A windy little capital with film-set imagination.',
    cos:['Cuba Street Studio','Aro Valley Works','Mount Victoria Labs','Cuba Street Collective','Aro Valley & Co'],
+   hoods:['Cuba Street','Aro Valley','Mount Victoria'],
    f:{pop:'0.4M metro',lang:'English & Māori',rent:'$1,296',sun:'2059'}},
   {name:'Christchurch', country:'New Zealand',
    d:{pace:3,nature:8,culture:6,social:5,warmth:4,afford:6,food:7,transit:6,openness:8,scale:4,safe:5.5,div:6},
@@ -2077,6 +2275,7 @@ const CITIES = [
    ind:['trades','health','tech'],
    why:'The rebuilt garden city &mdash; the Alps an hour from the office.',
    cos:['Riccarton Studio','Sumner Works','New Brighton Labs','Riccarton Collective','Sumner & Co'],
+   hoods:['Riccarton','Sumner','New Brighton'],
    f:{pop:'0.4M metro',lang:'English',rent:'$1,278',sun:'2070'}},
   {name:'Queenstown', country:'New Zealand',
    d:{pace:3,nature:10,culture:5,social:7,warmth:3,afford:4,food:7,transit:4,openness:8,scale:2,safe:7.5,div:6},
@@ -2084,6 +2283,7 @@ const CITIES = [
    ind:['hosp','remote','trades'],
    why:'The adrenaline capital in a postcard &mdash; lake, peaks, repeat.',
    cos:['Fernhill Studio','Frankton Works','Arrowtown Labs','Fernhill Collective','Frankton & Co'],
+   hoods:['Fernhill','Frankton','Arrowtown'],
    f:{pop:'0.05M',lang:'English',rent:'$1,600',sun:'1921'}},
 ];
 
@@ -2588,6 +2788,102 @@ if (typeof document !== 'undefined'){
 }
 
 
+/* ---------- home portraits ----------
+   A seeded illustration of one dwelling — the honest, deterministic
+   answer to "let me see the place": clearly art, never a photograph.
+   The facade follows the home's type, the palette the city's warmth,
+   and one window always glows for you. */
+function drawHomePortrait(cv, home, city){
+  const W = cv.width, H = cv.height;
+  const x = cv.getContext('2d');
+  const rnd = rngFor(home.id);
+  const w = (city.d.warmth||5)/10;
+  const mix = (a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+  const rgbS = c=>'rgb('+c.join(',')+')';
+
+  /* dusk sky, tinted by the city's climate */
+  const g = x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, rgbS(mix([15,26,35],[38,30,42], w)));
+  g.addColorStop(1, rgbS(mix([30,54,64],[96,62,36], w)));
+  x.fillStyle = g; x.fillRect(0,0,W,H);
+
+  /* a few stars + a small moon */
+  x.fillStyle = 'rgba(233,240,238,.6)';
+  for (let i=0;i<10;i++){ x.globalAlpha = .2+rnd()*.4; x.fillRect(rnd()*W, rnd()*H*.4, 1.3, 1.3); }
+  x.globalAlpha = 1;
+  const mx = W*(.12+rnd()*.2), my = H*(.12+rnd()*.12);
+  x.save(); x.shadowColor='rgba(245,201,126,.9)'; x.shadowBlur=10;
+  x.fillStyle='#F2E9D8'; x.beginPath(); x.arc(mx,my,4+rnd()*3,0,7); x.fill(); x.restore();
+
+  /* distant rooftops */
+  x.fillStyle = 'rgba(12,25,34,.55)';
+  for (let i=0;i<4;i++){ const bw=W*(.14+rnd()*.12), bx=rnd()*(W-bw); x.fillRect(bx, H*.52+rnd()*H*.1, bw, H); }
+
+  /* ground */
+  const groundY = H*.86;
+  x.fillStyle = '#0A141A'; x.fillRect(0, groundY, W, H-groundY);
+
+  const wall  = rgbS(mix([32,46,56],[86,62,48], w*.8));
+  const dark  = '#0C1922';
+  const amber = a=>'rgba(240,178,78,'+a+')';
+  const win = (wx,wy,ww,wh,bright)=>{
+    x.fillStyle = bright ? amber(.95) : (rnd()<.45 ? amber(.55) : 'rgba(20,34,44,.9)');
+    if (bright){ x.save(); x.shadowColor=amber(.9); x.shadowBlur=12; x.fillRect(wx,wy,ww,wh); x.restore(); }
+    else x.fillRect(wx,wy,ww,wh);
+  };
+
+  const kind = home.kind || home.type;
+  if (kind === 'Small house'){
+    const hw=W*.5, hx=(W-hw)/2, hh=H*.34, hy=groundY-hh;
+    x.fillStyle = wall; x.fillRect(hx,hy,hw,hh);
+    x.fillStyle = dark;                                   /* pitched roof */
+    x.beginPath(); x.moveTo(hx-W*.04,hy); x.lineTo(hx+hw/2,hy-H*.16); x.lineTo(hx+hw+W*.04,hy); x.closePath(); x.fill();
+    x.fillRect(hx+hw*.72, hy-H*.2, hw*.08, H*.1);         /* chimney */
+    x.fillStyle = '#1A2830'; x.fillRect(hx+hw*.42, groundY-hh*.5, hw*.16, hh*.5);  /* door */
+    win(hx+hw*.1,  hy+hh*.28, hw*.18, hh*.3, true);
+    win(hx+hw*.72, hy+hh*.28, hw*.18, hh*.3, false);
+    x.fillStyle = '#0A141A';                              /* a tree */
+    x.beginPath(); x.arc(hx-W*.1, groundY-H*.09, H*.11, 0, 7); x.fill();
+    x.fillRect(hx-W*.105, groundY-H*.06, W*.012, H*.06);
+  } else if (kind === 'Loft'){
+    const bw=W*.72, bx=(W-bw)/2, bh=H*.5, by=groundY-bh;
+    x.fillStyle = rgbS(mix([48,38,34],[92,58,40], w*.7)); /* brick tone */
+    x.fillRect(bx,by,bw,bh);
+    x.fillStyle = dark; x.fillRect(bx,by,bw,bh*.08);      /* parapet */
+    const cols=4, rows=2, gw=bw/(cols+1)*.62, gh=bh*.3;
+    const you = Math.floor(rnd()*cols);
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
+      const wx=bx+bw*(c+ .55)/(cols+ .6), wy=by+bh*.16+r*(gh+bh*.1);
+      if (r===0){ x.fillStyle='rgba(20,34,44,.9)'; x.beginPath(); x.arc(wx+gw/2, wy+4, gw/2, Math.PI, 0); x.fill(); }
+      win(wx, wy, gw, gh, r===1 && c===you);
+    }
+  } else {
+    /* apartment slice — width by bedrooms */
+    const widths = {'Studio':.34,'1-bedroom':.44,'2-bedroom':.58};
+    const bw=W*(widths[kind]||.44), bx=(W-bw)/2, bh=H*.62, by=groundY-bh;
+    x.fillStyle = wall; x.fillRect(bx,by,bw,bh);
+    x.fillStyle = dark; x.fillRect(bx-W*.015,by-H*.02,bw+W*.03,H*.02);   /* cornice */
+    const floors=5, cols=Math.max(2, Math.round(bw/ (W*.16)));
+    const youF=1+Math.floor(rnd()*(floors-2)), youC=Math.floor(rnd()*cols);
+    for (let f=0;f<floors;f++) for (let c=0;c<cols;c++){
+      const ww=bw/(cols*1.6), wh=bh/(floors*1.9);
+      const wx=bx+bw*(c+.35)/cols, wy=by+bh*(f+.3)/floors;
+      const bright = f===youF && c===youC;
+      win(wx,wy,ww,wh,bright);
+      if (bright){ x.fillStyle='rgba(231,239,238,.25)'; x.fillRect(wx-ww*.25, wy+wh, ww*1.5, 1.5); } /* balcony rail */
+    }
+    x.fillStyle = '#1A2830'; x.fillRect(bx+bw*.4, groundY-bh*.14, bw*.2, bh*.14);  /* entrance */
+    if (rnd()<.6){ x.fillStyle='#0F2018'; x.beginPath(); x.arc(bx+bw+W*.05, groundY-H*.05, H*.07, 0, 7); x.fill(); }
+  }
+
+  /* street lamp */
+  x.strokeStyle='rgba(231,239,238,.25)'; x.lineWidth=1.4;
+  const lx=W*.9;
+  x.beginPath(); x.moveTo(lx,groundY); x.lineTo(lx,groundY-H*.18); x.stroke();
+  x.save(); x.shadowColor=amber(.9); x.shadowBlur=8;
+  x.fillStyle=amber(.95); x.beginPath(); x.arc(lx,groundY-H*.19,2.4,0,7); x.fill(); x.restore();
+}
+
 
 
 /* A soft, slightly mystical loop: a slow drone pad drifting between
@@ -2813,7 +3109,8 @@ function hoodsFor(city){
 }
 function genHomes(city){
   const rnd = rngFor('homes:'+city.name);
-  const hoods = hoodsFor(city), base = baseRent(city), out = [];
+  const hoods = (city.hoods && city.hoods.length) ? city.hoods : hoodsFor(city);
+  const base = baseRent(city), out = [];
   for (let i=0;i<8;i++){
     const ty = HOME_TYPES[Math.floor(rnd()*HOME_TYPES.length)];
     const rent = Math.round(base*ty.mult*(0.88+rnd()*0.28)/10)*10;
@@ -2823,7 +3120,7 @@ function genHomes(city){
       id:'home|'+city.name+'|'+i,
       city:city.name,
       title:ty.t+' in '+hood,
-      hood, type:ty.t,
+      hood, type:ty.t, kind:ty.t,
       rentN:rent, rent:'$'+rent.toLocaleString('en-US')+'/mo',
       size:sqm+' m²',
       quirk:HOME_QUIRKS[Math.floor(rnd()*HOME_QUIRKS.length)],
@@ -3441,12 +3738,20 @@ function renderHomeList(){
     return;
   }
   list.innerHTML = items.map(h=>
-    '<div class="job"><div>'+
+    '<div class="job home-card" data-id="'+h.id+'" role="button" tabindex="0">'+
+    '<canvas class="home-thumb" width="224" height="156"></canvas><div class="home-mid">'+
     '<h4>'+h.title+'</h4><div class="co">'+h.quirk+'</div>'+
     '<div class="meta"><span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
     (h.furnished?'<span class="tag">furnished</span>':'')+
     '</div></div><button class="save" data-id="'+h.id+'" aria-label="Save this home" aria-pressed="false">&#9825;</button></div>'
   ).join('');
+  list.querySelectorAll('.home-card').forEach(el=>{
+    const h = homesAll.find(x=>x.id===el.dataset.id);
+    drawHomePortrait(el.querySelector('.home-thumb'), h, homesCity);
+    const peek = e=>{ if (e.target.closest('.save')) return; openPeek(h); };
+    el.onclick = peek;
+    el.onkeydown = e=>{ if (e.key==='Enter' && !e.target.closest('.save')) openPeek(h); };
+  });
   list.querySelectorAll('.save').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.id;
@@ -3463,6 +3768,19 @@ function renderHomeList(){
     };
   });
   syncHearts();
+}
+
+function openPeek(h){
+  const city = homesCity;
+  drawHomePortrait($('peek-canvas'), h, city);
+  $('peek-title').textContent = h.title;
+  $('peek-sub').textContent = h.quirk + ' — ' + h.hood + ', ' + city.name;
+  $('peek-meta').innerHTML =
+    '<span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
+    (h.furnished?'<span class="tag">furnished</span>':'');
+  $('peek-link').href = 'https://www.google.com/search?q=' +
+    encodeURIComponent(h.type + ' for rent ' + h.hood + ' ' + city.name);
+  $('peek-modal').classList.add('on');
 }
 
 function showHomes(city){
@@ -3566,12 +3884,14 @@ $('copy-text').onclick = async ()=>{
 
 $('reveal').onclick = endReveal;
 
+$('peek-close').onclick = ()=> $('peek-modal').classList.remove('on');
+$('peek-modal').onclick = e=>{ if (e.target === $('peek-modal')) $('peek-modal').classList.remove('on'); };
 $('how-open').onclick = ()=> $('how-modal').classList.add('on');
 $('how-close').onclick = ()=> $('how-modal').classList.remove('on');
 $('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };
 
 document.addEventListener('keydown', e=>{
-  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); }
+  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); $('peek-modal').classList.remove('on'); }
   if (e.key === 'Enter' && activeView === 'view-quiz' && !$('q-next').disabled
       && document.activeElement.tagName !== 'BUTTON'){
     $('q-next').click();

@@ -41,3 +41,21 @@ test('portal links exist for the mapped countries and are https', () => {
     assert.ok(label && url.startsWith('https://'), country);
   }
 });
+
+test('every city carries three real neighborhoods and homes live in them', () => {
+  for (const c of CITIES) {
+    assert.ok(Array.isArray(c.hoods) && c.hoods.length >= 3, c.name + ' hoods');
+    for (const h of genHomes(c)) {
+      assert.ok(c.hoods.includes(h.hood), `${c.name}: "${h.hood}" not in ${c.hoods}`);
+    }
+  }
+});
+
+test('no home is placed in a fictional company name', () => {
+  const suffixes = /( Studio| Works| Labs| Collective| & Co| Systems| Digital| Capital| Group)$/;
+  for (const c of CITIES) {
+    for (const h of genHomes(c)) {
+      assert.ok(!suffixes.test(h.hood), `${c.name}: "${h.hood}" looks like a company`);
+    }
+  }
+});

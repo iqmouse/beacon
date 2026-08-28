@@ -2,7 +2,7 @@ import { $, store, clamp } from './util.js';
 import { FIELDS, CITIES, ROLES, MODES, payBand, CONTINENT_OF, CONTS } from './data.js';
 import { QUESTIONS } from './questions.js';
 import { DIMS, DIM_LABELS, buildUser, rankAll, traitWords } from './scoring.js';
-import { drawCitySky } from './skyline.js';
+import { drawCitySky, drawHomePortrait } from './skyline.js';
 import { startAudio, SFX } from './audio.js';
 import { PORTALS, baseRent, genHomes, HOME_TYPES } from './homes.js';
 
@@ -612,12 +612,20 @@ function renderHomeList(){
     return;
   }
   list.innerHTML = items.map(h=>
-    '<div class="job"><div>'+
+    '<div class="job home-card" data-id="'+h.id+'" role="button" tabindex="0">'+
+    '<canvas class="home-thumb" width="224" height="156"></canvas><div class="home-mid">'+
     '<h4>'+h.title+'</h4><div class="co">'+h.quirk+'</div>'+
     '<div class="meta"><span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
     (h.furnished?'<span class="tag">furnished</span>':'')+
     '</div></div><button class="save" data-id="'+h.id+'" aria-label="Save this home" aria-pressed="false">&#9825;</button></div>'
   ).join('');
+  list.querySelectorAll('.home-card').forEach(el=>{
+    const h = homesAll.find(x=>x.id===el.dataset.id);
+    drawHomePortrait(el.querySelector('.home-thumb'), h, homesCity);
+    const peek = e=>{ if (e.target.closest('.save')) return; openPeek(h); };
+    el.onclick = peek;
+    el.onkeydown = e=>{ if (e.key==='Enter' && !e.target.closest('.save')) openPeek(h); };
+  });
   list.querySelectorAll('.save').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.id;
@@ -634,6 +642,19 @@ function renderHomeList(){
     };
   });
   syncHearts();
+}
+
+function openPeek(h){
+  const city = homesCity;
+  drawHomePortrait($('peek-canvas'), h, city);
+  $('peek-title').textContent = h.title;
+  $('peek-sub').textContent = h.quirk + ' — ' + h.hood + ', ' + city.name;
+  $('peek-meta').innerHTML =
+    '<span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
+    (h.furnished?'<span class="tag">furnished</span>':'');
+  $('peek-link').href = 'https://www.google.com/search?q=' +
+    encodeURIComponent(h.type + ' for rent ' + h.hood + ' ' + city.name);
+  $('peek-modal').classList.add('on');
 }
 
 function showHomes(city){
@@ -737,12 +758,14 @@ $('copy-text').onclick = async ()=>{
 
 $('reveal').onclick = endReveal;
 
+$('peek-close').onclick = ()=> $('peek-modal').classList.remove('on');
+$('peek-modal').onclick = e=>{ if (e.target === $('peek-modal')) $('peek-modal').classList.remove('on'); };
 $('how-open').onclick = ()=> $('how-modal').classList.add('on');
 $('how-close').onclick = ()=> $('how-modal').classList.remove('on');
 $('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };
 
 document.addEventListener('keydown', e=>{
-  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); }
+  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); $('peek-modal').classList.remove('on'); }
   if (e.key === 'Enter' && activeView === 'view-quiz' && !$('q-next').disabled
       && document.activeElement.tagName !== 'BUTTON'){
     $('q-next').click();

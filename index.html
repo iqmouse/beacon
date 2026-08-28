@@ -168,7 +168,7 @@
       <button class="ghost" id="homes-back">&larr; back to matches</button>
       <button class="ghost" id="homes-jobs">see jobs here</button>
     </div>
-    <p class="foot-note">Sample homes are illustrative &mdash; prices scaled from researched market rents. The links above search the real local market.</p>
+    <p class="foot-note">Every home is an illustrated sample in a real neighborhood, priced from researched market rents &mdash; tap one to see its portrait; the links search the real local market.</p>
   </section>
 
 </div>
@@ -194,6 +194,20 @@
     </div>
     <div class="row">
       <button class="ghost" id="prof-close">close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="peek-modal">
+  <div class="modal">
+    <canvas class="peek-canvas" id="peek-canvas" width="440" height="300"></canvas>
+    <h3 id="peek-title">&nbsp;</h3>
+    <p id="peek-sub" style="margin:.2rem 0 .6rem"></p>
+    <div class="meta" id="peek-meta" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+    <p class="peek-note">An illustrated portrait, not a photograph &mdash; the link below searches the real market.</p>
+    <div class="row">
+      <a class="btn2" id="peek-link" style="text-decoration:none" target="_blank" rel="noopener">real listings here &nearr;</a>
+      <button class="ghost" id="peek-close">close</button>
     </div>
   </div>
 </div>
