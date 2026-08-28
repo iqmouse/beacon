@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test",
     "build": "node build.js",
-    "deploy": "node build.js && wrangler pages deploy dist --project-name=beacon --commit-dirty=true"
+    "deploy": "node build.js && npx wrangler pages deploy dist --project-name=beacon --commit-dirty=true"
   },
   "license": "MIT"
 }
