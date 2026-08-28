@@ -76,6 +76,19 @@ npm run build   # emit dist/index.html
 The only external resource is Google Fonts (free, keyless); the app falls
 back to system fonts offline.
 
+## Deploying
+
+Hosted on **Cloudflare Pages** (free tier). One-time: `npx wrangler login`.
+Then every deploy is:
+
+```bash
+npm run deploy    # builds dist/ and pushes it to Cloudflare Pages
+```
+
+When the roadmap's server work starts (auth, live feeds), Cloudflare
+Workers + D1 live in the same account — API keys go in Worker secrets,
+never in this repo.
+
 ## Project layout
 
 ```
