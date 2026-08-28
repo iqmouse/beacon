@@ -37,7 +37,7 @@ export function genHomes(city){
   const rnd = rngFor('homes:'+city.name);
   const hoods = (city.hoods && city.hoods.length) ? city.hoods : hoodsFor(city);
   const base = baseRent(city), out = [];
-  for (let i=0;i<8;i++){
+  for (let i=0;i<12;i++){
     const ty = HOME_TYPES[Math.floor(rnd()*HOME_TYPES.length)];
     const rent = Math.round(base*ty.mult*(0.88+rnd()*0.28)/10)*10;
     const sqm = Math.round(ty.s[0] + rnd()*(ty.s[1]-ty.s[0]));
@@ -51,6 +51,9 @@ export function genHomes(city){
       size:sqm+' m²',
       quirk:HOME_QUIRKS[Math.floor(rnd()*HOME_QUIRKS.length)],
       furnished:rnd()<.4,
+      walk: city.d.transit >= 7 ? (3 + Math.floor(rnd()*10)) + ' min to the metro'
+          : city.d.transit >= 5 ? (5 + Math.floor(rnd()*12)) + ' min walk to the tram'
+          : 'parking on the street',
     });
   }
   return out.sort((a,b)=>a.rentN-b.rentN);

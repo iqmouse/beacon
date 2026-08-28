@@ -76,6 +76,14 @@ npm run build   # emit dist/index.html
 The only external resource is Google Fonts (free, keyless); the app falls
 back to system fonts offline.
 
+## Launch state
+
+Live and launch-ready: proper HTML5 document with viewport, SEO metadata,
+Open Graph tags, and an inline SVG favicon; verified mobile layout (375px)
+with no horizontal scroll; standards mode; 32 tests green. The build emits
+`dist/index.html` for the web and `dist/artifact.html` (bare content) for
+the claude.ai artifact wrapper.
+
 ## Deploying
 
 Live at **https://beacon-ejo.pages.dev** on Cloudflare Pages (free tier). One-time: `npx wrangler login`.

@@ -1,8 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>Beacon</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beacon — find the city that feels like you</title>
+<meta name="description" content="Twenty-six unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
+<meta name="theme-color" content="#0F1B22">
+<link rel="canonical" href="https://beacon-ejo.pages.dev/">
+<meta property="og:title" content="Beacon — find the city that feels like you">
+<meta property="og:description" content="A breezy, fully deterministic city-matching app. Same answers, same result, every time.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://beacon-ejo.pages.dev/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F1B22'/%3E%3Cpath d='M32 28 L16 58 H48 Z' fill='%23F0B24E' fill-opacity='.22'/%3E%3Ccircle cx='32' cy='27' r='7' fill='%23F0B24E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ephesis&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400;1,6..72,500&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="styles/beacon.css">
+</head>
+<body>
 
 <div class="sky"></div>
 <div class="beam"></div>
@@ -206,6 +220,7 @@
     <div class="meta" id="peek-meta" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
     <p class="peek-note">An illustrated portrait, not a photograph &mdash; the link below searches the real market.</p>
     <div class="row">
+      <button class="btn2" id="peek-save">save to lantern &#9825;</button>
       <a class="btn2" id="peek-link" style="text-decoration:none" target="_blank" rel="noopener">real listings here &nearr;</a>
       <button class="ghost" id="peek-close">close</button>
     </div>
@@ -226,3 +241,5 @@
 </div>
 
 <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,5 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>Beacon</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beacon — find the city that feels like you</title>
+<meta name="description" content="Twenty-six unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
+<meta name="theme-color" content="#0F1B22">
+<link rel="canonical" href="https://beacon-ejo.pages.dev/">
+<meta property="og:title" content="Beacon — find the city that feels like you">
+<meta property="og:description" content="A breezy, fully deterministic city-matching app. Same answers, same result, every time.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://beacon-ejo.pages.dev/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F1B22'/%3E%3Cpath d='M32 28 L16 58 H48 Z' fill='%23F0B24E' fill-opacity='.22'/%3E%3Ccircle cx='32' cy='27' r='7' fill='%23F0B24E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ephesis&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400;1,6..72,500&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
@@ -65,7 +77,7 @@
   }
 
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;overflow-x:hidden}
   body{
     background:var(--ground);
     color:var(--ink);
@@ -118,9 +130,10 @@
     position:relative; z-index:1;
     min-height:100vh;
     display:grid; place-items:center;
+    grid-template-columns:minmax(0,100%);   /* keeps children from resolving 100% as max-content */
     padding:6vh 20px 10vh;
   }
-  .view{ display:none; width:min(720px,100%); }
+  .view{ display:none; width:100%; max-width:720px; }
   .view.active{ display:block; animation:rise .7s cubic-bezier(.22,.8,.3,1) both; }
   @keyframes rise{
     from{opacity:0; transform:translateY(26px)}
@@ -612,6 +625,8 @@
     border:1px solid var(--card-edge); display:block;
   }
   .home-card{ cursor:pointer; }
+  .chip-gap{ flex-basis:100%; height:2px; }
+  .hood-chip{ font-style:italic; font-family:'Newsreader',Georgia,serif; }
   .home-mid{ flex:1; min-width:0; }
   .peek-canvas{
     width:100%; border-radius:14px; display:block;
@@ -654,6 +669,8 @@
     *{ transition-duration:.01s !important; }
   }
 </style>
+</head>
+<body>
 
 <div class="sky"></div>
 <div class="beam"></div>
@@ -857,6 +874,7 @@
     <div class="meta" id="peek-meta" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
     <p class="peek-note">An illustrated portrait, not a photograph &mdash; the link below searches the real market.</p>
     <div class="row">
+      <button class="btn2" id="peek-save">save to lantern &#9825;</button>
       <a class="btn2" id="peek-link" style="text-decoration:none" target="_blank" rel="noopener">real listings here &nearr;</a>
       <button class="ghost" id="peek-close">close</button>
     </div>
@@ -3111,7 +3129,7 @@ function genHomes(city){
   const rnd = rngFor('homes:'+city.name);
   const hoods = (city.hoods && city.hoods.length) ? city.hoods : hoodsFor(city);
   const base = baseRent(city), out = [];
-  for (let i=0;i<8;i++){
+  for (let i=0;i<12;i++){
     const ty = HOME_TYPES[Math.floor(rnd()*HOME_TYPES.length)];
     const rent = Math.round(base*ty.mult*(0.88+rnd()*0.28)/10)*10;
     const sqm = Math.round(ty.s[0] + rnd()*(ty.s[1]-ty.s[0]));
@@ -3125,9 +3143,66 @@ function genHomes(city){
       size:sqm+' m²',
       quirk:HOME_QUIRKS[Math.floor(rnd()*HOME_QUIRKS.length)],
       furnished:rnd()<.4,
+      walk: city.d.transit >= 7 ? (3 + Math.floor(rnd()*10)) + ' min to the metro'
+          : city.d.transit >= 5 ? (5 + Math.floor(rnd()*12)) + ' min walk to the tram'
+          : 'parking on the street',
     });
   }
   return out.sort((a,b)=>a.rentN-b.rentN);
+}
+
+
+/* Beacon jobs — pure and DOM-free, tested under node.
+   Availability is honest: a field the city's economy actually carries
+   gets a full slate; anywhere else the market is thin — a couple of
+   remote-leaning listings plus what the city is genuinely strong in. */
+
+/* deterministic per-city rotation, stable forever */
+const spinFor = city => city.name.length;
+
+function marketFor(city, fieldId){
+  if (!city.ind.includes(fieldId)) return 'thin';
+  return city.d.scale >= 7 ? 'strong' : 'steady';
+}
+
+function marketNote(city, fieldId){
+  const field = FIELDS.find(f=>f.id===fieldId);
+  const m = marketFor(city, fieldId);
+  if (m === 'strong') return field.label + ' is one of ' + city.name + '’s strong suits';
+  if (m === 'steady') return 'a steady ' + field.label.toLowerCase() + ' market';
+  const leans = city.ind.map(i=>FIELDS.find(f=>f.id===i).label.toLowerCase()).slice(0,2).join(' and ');
+  return 'a thin market for ' + field.label.toLowerCase() + ' — ' + city.name + ' leans ' + leans;
+}
+
+function buildJobs(city, fieldId){
+  const spin = spinFor(city);
+  const market = marketFor(city, fieldId);
+  const listings = [];
+  const make = (fid, i, alt)=>{
+    const roles = ROLES[fid];
+    return {
+      role: roles[(i + spin) % roles.length],
+      co: city.cos[(i + spin) % city.cos.length],
+      mode: alt ? MODES[(i + spin) % MODES.length]
+                : (market === 'thin' ? 'Remote-friendly' : MODES[(i + spin) % MODES.length]),
+      pay: payBand(city, fid, i),
+      field: fid,
+      alt,
+    };
+  };
+  if (market === 'thin'){
+    /* the honest two in your field, then what this city really hires for */
+    for (let i=0;i<2;i++) listings.push(make(fieldId, i, false));
+    const local = city.ind[0] === fieldId ? city.ind[1] : city.ind[0];
+    for (let i=0;i<3;i++) listings.push(make(local, i, true));
+  } else {
+    for (let i=0;i<5;i++) listings.push(make(fieldId, i, false));
+  }
+  return { market, note: marketNote(city, fieldId), listings };
+}
+
+function altLabel(fieldId){
+  return FIELDS.find(f=>f.id===fieldId).label;
 }
 
 
@@ -3675,7 +3750,9 @@ function renderJobList(city, items){
       : it.role;
     return '<div class="job"><div>'+
       '<h4>'+title+'</h4><div class="co">'+it.co+' · '+city.name+'</div>'+
-      '<div class="meta"><span class="tag">'+it.mode+'</span><span class="tag pay">'+it.pay+'</span></div></div>'+
+      '<div class="meta"><span class="tag">'+it.mode+'</span><span class="tag pay">'+it.pay+'</span>'+
+      (it.alt?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">'+altLabel(it.field)+' · hiring here</span>':'')+
+      '</div></div>'+
       '<button class="save" data-id="'+id.replace(/"/g,'&quot;')+'" data-role="'+it.role.replace(/"/g,'&quot;')+'" data-co="'+it.co.replace(/"/g,'&quot;')+'" data-mode="'+it.mode+'" data-pay="'+it.pay+'" aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
   }).join('');
 
@@ -3704,43 +3781,46 @@ function showJobs(city){
   currentCity = city;
   const fieldId = answers.field || 'remote';
   const field = FIELDS.find(f=>f.id===fieldId);
-  const roles = ROLES[fieldId];
 
   $('jobs-city').textContent = city.name;
-  $('jobs-sub').textContent = field.label + ' · curated for your search';
   drawCitySky($('jobs-canvas'), city);
 
-  const spin = city.name.length;              /* per-city rotation, stable forever */
-  const curated = roles.map((_, i)=>({
-    role: roles[(i + spin) % roles.length],
-    co: city.cos[(i + spin) % city.cos.length],
-    mode: MODES[(i + spin) % MODES.length],
-    pay: payBand(city, fieldId, i),
-  }));
-  renderJobList(city, curated);
-  $('jobs-src').textContent = 'generated by formula · pay scaled to local cost of living';
+  const jm = buildJobs(city, fieldId);
+  $('jobs-sub').textContent = field.label + ' · ' + jm.note;
+  $('jobs-src').textContent = {
+    strong: '\u25cf strong market · generated by formula, pay scaled to local cost of living',
+    steady: '\u25cf steady market · generated by formula, pay scaled to local cost of living',
+    thin:   '\u25cb thin market · the last three are where this city actually hires',
+  }[jm.market];
+
+  renderJobList(city, jm.listings);
   go('view-jobs');
 }
 
 
 /* ================= homes (view) ================= */
-let homesCity = null, homesAll = [], homeType = 'All';
+let homesCity = null, homesAll = [], homeType = 'All', homeHood = 'All', homeSort = 'price';
 function renderHomeList(){
   const cap = +$('home-budget').value;
   const base = baseRent(homesCity);
   const capRent = Math.round(base*(0.6 + cap*0.16)/10)*10;   /* slider 0..10 → .6x–2.2x market */
   $('home-bval').textContent = cap===10 ? 'any budget' : '≤ $'+capRent.toLocaleString('en-US');
-  const items = homesAll.filter(h=>
-    (homeType==='All' || h.type===homeType) && (cap===10 || h.rentN<=capRent));
+  let items = homesAll.filter(h=>
+    (homeType==='All' || h.type===homeType) &&
+    (homeHood==='All' || h.hood===homeHood) &&
+    (cap===10 || h.rentN<=capRent));
+  items = items.slice().sort((a,b)=> homeSort==='size'
+    ? parseInt(b.size)-parseInt(a.size) || a.rentN-b.rentN
+    : a.rentN-b.rentN);
   const list = $('home-list');
   if (!items.length){
-    list.innerHTML = '<p class="lantern-empty">Nothing in that shape here — loosen the budget a little.</p>';
+    list.innerHTML = '<p class="lantern-empty">Nothing in that shape here — loosen the filters a little.</p>';
     return;
   }
   list.innerHTML = items.map(h=>
     '<div class="job home-card" data-id="'+h.id+'" role="button" tabindex="0">'+
     '<canvas class="home-thumb" width="224" height="156"></canvas><div class="home-mid">'+
-    '<h4>'+h.title+'</h4><div class="co">'+h.quirk+'</div>'+
+    '<h4>'+h.title+'</h4><div class="co">'+h.quirk+' · '+h.walk+'</div>'+
     '<div class="meta"><span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
     (h.furnished?'<span class="tag">furnished</span>':'')+
     '</div></div><button class="save" data-id="'+h.id+'" aria-label="Save this home" aria-pressed="false">&#9825;</button></div>'
@@ -3775,9 +3855,24 @@ function openPeek(h){
   drawHomePortrait($('peek-canvas'), h, city);
   $('peek-title').textContent = h.title;
   $('peek-sub').textContent = h.quirk + ' — ' + h.hood + ', ' + city.name;
+  const fieldId = answers.field || 'remote';
+  const band = payBand(city, fieldId, 1).match(/\d+/g).map(Number);
+  const share = Math.round(h.rentN * 12 / ((band[0]+band[1])/2 * 1000) * 100);
   $('peek-meta').innerHTML =
     '<span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
-    (h.furnished?'<span class="tag">furnished</span>':'');
+    (h.furnished?'<span class="tag">furnished</span>':'')+
+    '<span class="tag">'+h.walk+'</span>'+
+    '<span class="tag">≈ '+share+'% of a local '+FIELDS.find(f=>f.id===fieldId).label.toLowerCase()+' salary</span>';
+  const pk = $('peek-save');
+  const on = savedHomes.some(s=>s.id===h.id);
+  pk.textContent = on ? 'in your lantern ♥' : 'save to lantern ♡';
+  pk.onclick = ()=>{
+    const now = savedHomes.some(s=>s.id===h.id);
+    if (now){ savedHomes = savedHomes.filter(s=>s.id!==h.id); SFX.unsave(); }
+    else { savedHomes.push({id:h.id, city:h.city, title:h.title, hood:h.hood, rent:h.rent, size:h.size}); SFX.save(); }
+    persistLantern(); updateBadge(!now); syncHearts();
+    pk.textContent = now ? 'save to lantern ♡' : 'in your lantern ♥';
+  };
   $('peek-link').href = 'https://www.google.com/search?q=' +
     encodeURIComponent(h.type + ' for rent ' + h.hood + ' ' + city.name);
   $('peek-modal').classList.add('on');
@@ -3790,15 +3885,32 @@ function showHomes(city){
   $('homes-city').textContent = city.name;
   $('homes-sub').textContent = 'a sample of the market · one-bed median $'+baseRent(city).toLocaleString('en-US')+'/mo';
   drawCitySky($('homes-canvas'), city);
-  $('home-types').innerHTML = ['All', ...HOME_TYPES.map(t=>t.t)].map(t=>
-    '<button class="chip'+(t===homeType?' picked':'')+'" data-t="'+t+'">'+t+'</button>').join('');
+  homeHood = 'All'; homeSort = 'price';
+  $('home-types').innerHTML =
+    ['All', ...HOME_TYPES.map(t=>t.t)].map(t=>
+      '<button class="chip'+(t===homeType?' picked':'')+'" data-k="type" data-t="'+t+'">'+t+'</button>').join('') +
+    '<span class="chip-gap"></span>' +
+    ['All', ...(city.hoods||[])].map(hd=>
+      '<button class="chip hood-chip'+(hd===homeHood?' picked':'')+'" data-k="hood" data-t="'+hd.replace(/"/g,'&quot;')+'">'+(hd==='All'?'Anywhere':hd)+'</button>').join('') +
+    '<span class="chip-gap"></span>' +
+    '<button class="chip" data-k="sort" data-t="price">cheapest first</button>'+
+    '<button class="chip" data-k="sort" data-t="size">biggest first</button>';
+  const chipSync = ()=>{
+    $('home-types').querySelectorAll('.chip').forEach(b=>{
+      if (b.dataset.k==='type') b.classList.toggle('picked', b.dataset.t===homeType);
+      if (b.dataset.k==='hood') b.classList.toggle('picked', b.dataset.t===homeHood || (b.dataset.t==='All' && homeHood==='All'));
+      if (b.dataset.k==='sort') b.classList.toggle('picked', b.dataset.t===homeSort);
+    });
+  };
   $('home-types').querySelectorAll('.chip').forEach(btn=>{
     btn.onclick = ()=>{
-      homeType = btn.dataset.t;
-      $('home-types').querySelectorAll('.chip').forEach(b=>b.classList.toggle('picked', b.dataset.t===homeType));
-      renderHomeList();
+      if (btn.dataset.k==='type') homeType = btn.dataset.t;
+      if (btn.dataset.k==='hood') homeHood = btn.dataset.t;
+      if (btn.dataset.k==='sort') homeSort = btn.dataset.t;
+      chipSync(); renderHomeList();
     };
   });
+  chipSync();
   $('home-budget').value = 10;
   $('home-budget').oninput = renderHomeList;
   const portal = PORTALS[city.country];
@@ -3898,3 +4010,5 @@ document.addEventListener('keydown', e=>{
   }
 });
 </script>
+</body>
+</html>

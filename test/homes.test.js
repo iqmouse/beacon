@@ -8,10 +8,10 @@ test('home generation is deterministic per city', () => {
   assert.deepEqual(genHomes(lisbon), genHomes(lisbon));
 });
 
-test('every city yields 8 priced, sized, located homes sorted by rent', () => {
+test('every city yields 12 priced, sized, located homes sorted by rent', () => {
   for (const c of CITIES) {
     const homes = genHomes(c);
-    assert.equal(homes.length, 8, c.name);
+    assert.equal(homes.length, 12, c.name);
     for (let i = 0; i < homes.length; i++) {
       const h = homes[i];
       assert.ok(h.rentN > 0 && h.hood && h.size && h.quirk, c.name);
@@ -58,4 +58,10 @@ test('no home is placed in a fictional company name', () => {
       assert.ok(!suffixes.test(h.hood), `${c.name}: "${h.hood}" looks like a company`);
     }
   }
+});
+
+test('twelve homes per city, each with a getting-around line', () => {
+  const homes = genHomes(CITIES.find(c => c.name === 'Tokyo'));
+  assert.equal(homes.length, 12);
+  for (const h of homes) assert.ok(h.walk && h.walk.length > 3);
 });
