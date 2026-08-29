@@ -704,7 +704,7 @@
     <div class="cta-row">
       <button class="btn" id="begin">Begin the search</button>
     </div>
-    <p class="whisper">twenty-six questions &middot; one unhurried wander</p>
+    <p class="whisper">twenty-seven questions &middot; one unhurried wander</p>
   </section>
 
   <!-- QUIZ -->
@@ -726,7 +726,8 @@
     <div class="results-head">
       <p class="eyebrow">The light points toward</p>
       <h2 class="script" id="top-city-script">&nbsp;</h2>
-      <p class="results-sub">matched across thirteen dimensions &middot; 173 cities</p>
+      <p class="results-sub">matched across fourteen dimensions &middot; 173 cities</p>
+      <p class="results-sub" id="doors-sub"></p>
     </div>
     <div class="match-list" id="match-list"></div>
     <div class="cont-head">
@@ -738,6 +739,7 @@
       <button class="btn2" id="to-compare">compare side by side</button>
       <button class="btn2" id="to-share">create my card</button>
       <button class="ghost" id="how-open">how the light works</button>
+      <button class="ghost" id="donate-link" hidden>support Beacon &hearts;</button>
       <button class="ghost" id="restart">wander again</button>
     </div>
   </section>
@@ -873,6 +875,7 @@
     <p>No model, no black box, no keys &mdash; Beacon is a formula you could check by hand.</p>
     <p>Your twenty-six answers become a profile across thirteen dimensions. Every city carries researched numbers &mdash; Numbeo rents, cost-of-living and safety indexes, Wikipedia sunshine hours, its actual languages. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
     <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way (cheaper than your comfort is never penalized, pricier is only forgiven when it buys the quality you named); <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
+    <p><b>Visas</b> are group-level tourist-entry rules &mdash; passport blocs (EU freedom of movement, the Common Travel Area, Mercosur residence rights, trans-Tasman) plus each country&rsquo;s typical entry list. Coarse by design and worth double-checking against official sources before you book anything.</p>
     <p>The weighted average is raised to a power to spread the field, and that is your percentage &mdash; same answers, same result, every time. Jobs, pay bands, and homes are seeded formulas over each city&rsquo;s industries, cost index, and market rent.</p>
     <div class="row">
       <button class="ghost" id="how-close">close</button>
@@ -2417,6 +2420,9 @@ const QUESTIONS = [
       {t:'Doable, but it’d wear on me', s:'small talk matters to you more than you’d think', fx:{}},
       {t:'Honestly, a dealbreaker', s:'you need to actually talk to people', fx:{}},
     ]},
+  { type:'multichips', key:'passports',
+    title:'Which passports do you hold?',
+    opts:['United States','Canada','United Kingdom','Ireland','Germany','France','Spain','Portugal','Italy','Netherlands','Another EU / EEA country','Switzerland','Australia','New Zealand','Japan','South Korea','Singapore','Malaysia','China','India','Thailand','Vietnam','Philippines','Indonesia','Brazil','Argentina','Mexico','Colombia','Chile','Turkey','United Arab Emirates','Israel','South Africa','Nigeria','Kenya','Egypt','Pakistan','Somewhere else'] },
   { type:'cards', key:'friday',
     title:'Friday, eleven p.m. Where are you?',
     opts:[
@@ -2496,6 +2502,181 @@ const QUESTIONS = [
 ];
 
 
+/* Beacon visas — pure and DOM-free, tested under node.
+   Group-level tourist-entry rules: which passports walk into which
+   countries without paperwork, which need a quick e-permit, which need
+   a real visa. Deliberately coarse — blocs and typical entry rules,
+   not per-person immigration advice — and the app says so.
+   Entry tiers fold light e-authorizations (ESTA/eTA/ETA) into 'free'. */
+
+const PASSPORTS = [
+  {label:'United States', g:'US', home:['United States','Puerto Rico']},
+  {label:'Canada', g:'CA', home:['Canada']},
+  {label:'United Kingdom', g:'UK', home:['United Kingdom','Scotland']},
+  {label:'Ireland', g:'EU', home:['Ireland']},
+  {label:'Germany', g:'EU', home:['Germany']},
+  {label:'France', g:'EU', home:['France']},
+  {label:'Spain', g:'EU', home:['Spain']},
+  {label:'Portugal', g:'EU', home:['Portugal']},
+  {label:'Italy', g:'EU', home:['Italy']},
+  {label:'Netherlands', g:'EU', home:['Netherlands']},
+  {label:'Another EU / EEA country', g:'EU', home:[]},
+  {label:'Switzerland', g:'EU', home:['Switzerland']},
+  {label:'Australia', g:'AU', home:['Australia']},
+  {label:'New Zealand', g:'NZ', home:['New Zealand']},
+  {label:'Japan', g:'JP', home:['Japan']},
+  {label:'South Korea', g:'KR', home:['South Korea']},
+  {label:'Singapore', g:'SG', home:['Singapore']},
+  {label:'Malaysia', g:'MY', home:['Malaysia']},
+  {label:'China', g:'CN', home:['China']},
+  {label:'India', g:'IN', home:['India']},
+  {label:'Thailand', g:'TH', home:['Thailand']},
+  {label:'Vietnam', g:'VN', home:['Vietnam']},
+  {label:'Philippines', g:'PH', home:['Philippines']},
+  {label:'Indonesia', g:'ID', home:['Indonesia']},
+  {label:'Brazil', g:'BR', home:['Brazil']},
+  {label:'Argentina', g:'AR', home:['Argentina']},
+  {label:'Mexico', g:'MX', home:['Mexico']},
+  {label:'Colombia', g:'CO', home:['Colombia']},
+  {label:'Chile', g:'CL', home:['Chile']},
+  {label:'Turkey', g:'TR', home:['Turkey']},
+  {label:'United Arab Emirates', g:'AE', home:['United Arab Emirates']},
+  {label:'Israel', g:'IL', home:['Israel']},
+  {label:'South Africa', g:'ZA', home:['South Africa']},
+  {label:'Nigeria', g:'NG', home:['Nigeria']},
+  {label:'Kenya', g:'KE', home:['Kenya']},
+  {label:'Egypt', g:'EG', home:['Egypt']},
+  {label:'Pakistan', g:'PK', home:['Pakistan']},
+  {label:'Somewhere else', g:null, home:[]},
+];
+
+/* EU/EEA/Swiss freedom-of-movement destinations */
+const EU_DEST = new Set(['Portugal','Spain','France','Belgium','Netherlands','Germany',
+  'Switzerland','Italy','Sweden','Norway','Finland','Iceland','Ireland','Poland','Hungary',
+  'Romania','Croatia','Slovenia','Greece','Estonia','Latvia','Lithuania','Malta','Denmark',
+  'Austria','Czechia']);
+/* South American residence-agreement destinations (Mercosur & associates) */
+const SAM_DEST = new Set(['Brazil','Argentina','Chile','Colombia','Peru','Uruguay']);
+const SAM_PASS = new Set(['BR','AR','CL','CO']);
+
+const STRONG = ['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY'];
+const LATAM  = ['BR','AR','MX','CO','CL'];
+
+/* Per destination country: vf = visa-free / on-arrival / light e-permit;
+   evisa = straightforward online visa; no = effectively closed.
+   'ALL' opens that tier to every passport group. Anything unlisted: visa. */
+const VISAS = {
+  'United States':        {vf:['EU','UK','CA','AU','NZ','JP','KR','SG','CL','IL'], evisa:[]},
+  'Puerto Rico':          {vf:['EU','UK','CA','AU','NZ','JP','KR','SG','CL','IL'], evisa:[]},
+  'Canada':               {vf:['EU','UK','US','AU','NZ','JP','KR','SG','CL','IL'], evisa:['MX']},
+  'Mexico':               {vf:[...STRONG,'BR','AR','CO','CL','AE','IL'], evisa:['TR']},
+  'Costa Rica':           {vf:[...STRONG,'MX','BR','AR','CL','CO','AE','IL'], evisa:[]},
+  'Panama':               {vf:[...STRONG,...LATAM,'AE','IL','ZA'], evisa:[]},
+  'Dominican Republic':   {vf:[...STRONG,...LATAM,'AE','IL','ZA','TR'], evisa:[]},
+  'Brazil':               {vf:['EU','UK','JP','KR','SG','MY','MX','CL','AR','CO','ZA','IL','TR'], evisa:['US','CA','AU','NZ']},
+  'Argentina':            {vf:[...STRONG,...LATAM.filter(g=>g!=='AR'),'ZA','IL','TR','AE'], evisa:[]},
+  'Chile':                {vf:[...STRONG,'BR','AR','CO','MX','ZA','IL','TR','AE'], evisa:[]},
+  'Peru':                 {vf:[...STRONG,...LATAM,'ZA','IL','TR','AE'], evisa:[]},
+  'Colombia':             {vf:[...STRONG,'BR','AR','CL','MX','IL','TR','AE'], evisa:[]},
+  'Uruguay':              {vf:[...STRONG,...LATAM,'ZA','IL','TR','AE'], evisa:[]},
+  /* Schengen Europe — one shared entry list */
+  'Portugal':   'SCHENGEN','Spain':'SCHENGEN','France':'SCHENGEN','Belgium':'SCHENGEN',
+  'Netherlands':'SCHENGEN','Germany':'SCHENGEN','Switzerland':'SCHENGEN','Italy':'SCHENGEN',
+  'Sweden':'SCHENGEN','Norway':'SCHENGEN','Finland':'SCHENGEN','Iceland':'SCHENGEN',
+  'Poland':'SCHENGEN','Hungary':'SCHENGEN','Romania':'SCHENGEN','Croatia':'SCHENGEN',
+  'Slovenia':'SCHENGEN','Greece':'SCHENGEN','Estonia':'SCHENGEN','Latvia':'SCHENGEN',
+  'Lithuania':'SCHENGEN','Malta':'SCHENGEN','Denmark':'SCHENGEN','Austria':'SCHENGEN',
+  'Czechia':'SCHENGEN',
+  'Ireland':              {vf:['UK','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','MX','CO','CL','AE','IL','ZA'], evisa:[]},
+  'United Kingdom':       {vf:['EU','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','MX','CO','CL','AE','IL'], evisa:[]},
+  'Scotland':             {vf:['EU','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','MX','CO','CL','AE','IL'], evisa:[]},
+  'Serbia':               {vf:[...STRONG,...LATAM,'AE','IL','TR','CN'], evisa:[]},
+  'Georgia':              {vf:[...STRONG,...LATAM,'AE','IL','TR','ZA','CN'], evisa:['IN','PH','VN','ID','EG','NG','KE','PK']},
+  'Turkey':               {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','CL','CO','MX','AE','IL','ZA','TH','ID','KZ'], evisa:['VN','PH','IN','EG']},
+  'Morocco':              {vf:[...STRONG,...LATAM,'AE','TR','ID','PH'], evisa:[]},
+  'Ghana':                {vf:['NG','KE','ZA'], evisa:[]},
+  'Nigeria':              {vf:['KE'], evisa:[]},
+  'Kenya':                {vf:[], evisa:'ALL'},
+  'Rwanda':               {vf:'ALL', evisa:[]},
+  'South Africa':         {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','CL','IL','KE'], evisa:[]},
+  'Egypt':                {vf:[...STRONG,'AE','IL'], evisa:['IN','CN','BR','AR','MX','CL','CO','TR','ZA']},
+  'Israel':               {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MX','BR','AR','CL','CO','ZA'], evisa:[]},
+  'Qatar':                {vf:[...STRONG,...LATAM,'AE','TR','ZA','IN','TH','ID','KZ'], evisa:[]},
+  'United Arab Emirates': {vf:[...STRONG,'CN','MX','BR','AR','CL','CO','IL','KZ'], evisa:['IN','ZA','TR','TH','PH','VN','ID','EG','NG','KE','PK']},
+  'Oman':                 {vf:[...STRONG,'AE','TR'], evisa:['IN','CN','BR','AR','MX','CL','CO','ZA','TH','PH','VN','ID','EG']},
+  'Japan':                {vf:['EU','UK','US','CA','AU','NZ','KR','SG','MY','MX','BR','AR','CL','TR','AE','IL','TH'], evisa:['ID','VN','CN','IN','PH']},
+  'South Korea':          {vf:['EU','UK','US','CA','AU','NZ','JP','SG','MY','MX','BR','AR','CL','CO','TR','AE','IL','TH'], evisa:['ID','VN','CN','IN','PH','KZ']},
+  'China':                {vf:['EU','MY','SG','TH','JP','KR','AU','NZ'], evisa:[]},
+  'Hong Kong':            {vf:[...STRONG,...LATAM,'ZA','IL','TR','AE','TH','ID','PH','VN','KE','EG','KZ'], evisa:['IN']},
+  'Vietnam':              {vf:['EU','UK','JP','KR','MY','SG','TH','ID','PH'], evisa:'ALL'},
+  'Cambodia':             {vf:['MY','SG','TH','ID','PH','VN'], evisa:'ALL'},
+  'Thailand':             {vf:[...STRONG,'CN','IN','BR','AR','MX','CL','CO','ZA','TR','AE','IL','ID','PH','VN','KZ'], evisa:'ALL'},
+  'Malaysia':             {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','CN','IN','BR','AR','MX','CL','CO','ZA','TR','AE','TH','ID','PH','VN','EG','KE','KZ'], evisa:[]},
+  'Singapore':            {vf:['EU','UK','US','CA','AU','NZ','JP','KR','MY','CN','BR','AR','MX','CL','CO','ZA','TR','AE','IL','TH','ID','PH','VN','KZ'], evisa:[]},
+  'Indonesia':            {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY','CN','IN','BR','AR','MX','CL','CO','ZA','TR','AE','TH','PH','VN','KE','EG'], evisa:[], no:['IL']},
+  'Philippines':          {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','MX','CL','CO','ZA','TR','AE','IL','TH','ID','VN','KE'], evisa:['IN','CN']},
+  'India':                {vf:[], evisa:'ALL', no:['PK']},
+  'Sri Lanka':            {vf:['IN','CN','MY','JP','ID','TH'], evisa:'ALL'},
+  'Nepal':                {vf:'ALL', evisa:[]},
+  'Kazakhstan':           {vf:[...STRONG,'TR','AE','IL','CN','IN','TH'], evisa:[]},
+  'Taiwan':               {vf:['EU','UK','US','CA','AU','NZ','JP','KR','SG','MY','IL','CL'], evisa:['TH','VN','PH','ID','IN'], no:['CN']},
+  'Australia':            {vf:['EU','UK','US','CA','JP','KR','SG','MY'], evisa:[]},
+  'New Zealand':          {vf:['EU','UK','US','CA','JP','KR','SG','MY','BR','AR','CL','MX','AE','IL'], evisa:[]},
+};
+
+const SCHENGEN_ENTRY = {vf:['UK','US','CA','AU','NZ','JP','KR','SG','MY','BR','AR','MX','CO','CL','AE','IL'], evisa:[]};
+
+function entryFor(country){
+  const v = VISAS[country];
+  if (v === 'SCHENGEN') return SCHENGEN_ENTRY;
+  return v || null;
+}
+
+function resolvePassports(labels){
+  const lower = (labels||[]).map(l=>String(l).toLowerCase());
+  return PASSPORTS.filter(p=>lower.includes(p.label.toLowerCase()) && p.g);
+}
+
+/* best access any of the held passports gets to this country */
+function access(passports, country){
+  if (!passports || !passports.length) return 'unknown';
+  /* best starts empty — a lone passport's tier stands even when it is 'no';
+     across several passports the highest tier wins */
+  let best = null;
+  const rank = {home:6, union:5, free:4, evisa:3, visa:2, no:1};
+  const entry = entryFor(country);
+  for (const p of passports){
+    let a = 'visa';
+    if (p.home.includes(country)) a = 'home';
+    else if (p.g === 'EU' && EU_DEST.has(country)) a = 'union';
+    else if ((p.g === 'AU' && country === 'New Zealand') || (p.g === 'NZ' && country === 'Australia')) a = 'union';
+    else if (p.g === 'UK' && country === 'Ireland') a = 'union';       /* Common Travel Area */
+    else if (SAM_PASS.has(p.g) && SAM_DEST.has(country)) a = 'union';  /* Mercosur residence agreement */
+    else if (entry){
+      if (entry.no && entry.no.includes(p.g)) a = 'no';
+      else if (entry.vf === 'ALL' || (Array.isArray(entry.vf) && entry.vf.includes(p.g))) a = 'free';
+      else if (entry.evisa === 'ALL' || (Array.isArray(entry.evisa) && entry.evisa.includes(p.g))) a = 'evisa';
+    }
+    if (rank[a] > (rank[best] || 0)) best = a;
+  }
+  return best;
+}
+
+const ACCESS_LABEL = {
+  home:  'this is home',
+  union: 'right to live & work',
+  free:  'visa-free entry',
+  evisa: 'quick e-visa',
+  visa:  'needs a visa',
+  no:    'effectively closed',
+  unknown: '',
+};
+
+function visaFit(a){
+  return {home:1, union:1, free:.85, evisa:.7, visa:.5, no:.15, unknown:1}[a] ?? 1;
+}
+
+
 /* Beacon scoring — pure and DOM-free so it runs under node --test.
    Ported verbatim from the verified in-app scorer; only the implicit
    globals (user, answers) became explicit parameters. */
@@ -2506,7 +2687,7 @@ const DIM_LABELS = {
   pace:'Pace of life', nature:'Nature', culture:'Culture', social:'Social scene',
   warmth:'Climate', afford:'Cost of living', food:'Food scene',
   transit:'Getting around', openness:'Ease of arriving', scale:'City size',
-  safe:'Safety', div:'Diversity', lang:'Language ease'
+  safe:'Safety', div:'Diversity', lang:'Language ease', visa:'Visa ease'
 };
 
 const WEIGHTS = {
@@ -2553,6 +2734,7 @@ function buildUser(answers, QUESTIONS){
   user.learn = [9,6,3,0][answers.langlearn ?? 1];
   user.trade = ['culture','cheap','nature','none'][answers.safetrade ?? 3];
   user.qolDims = [['transit','safe'],['food','culture'],['nature','transit'],null][answers.worthit ?? 0];
+  user.passports = resolvePassports(answers.passports);
   return user;
 }
 
@@ -2595,11 +2777,14 @@ function scoreCity(c, user, fieldId){
     sum += fit * WEIGHTS[k];
     wsum += WEIGHTS[k];
   }
+  const hasPass = user.passports && user.passports.length;
   const extras = [
     ['lang',   langFit(c, user), 1.2],
     ['afford', costFit(c, user), 1.15],
     ['safe',   safeFit(c, user), .7 + .06*user.safe],
     ['div',    divFit(c, user), .3 + .07*user.div],
+    /* visa ease: a paperwork question, weighted only when we know the passport */
+    ['visa',   hasPass ? visaFit(access(user.passports, c.country)) : 1, hasPass ? 1.0 : 0],
   ];
   for (const [k,f,w] of extras){
     fits[k] = Math.round(f*100);
@@ -3552,6 +3737,12 @@ function endReveal(){
 
 function renderResults(){
   $('top-city-script').textContent = matches[0].city.name;
+  if (user.passports && user.passports.length){
+    const open = CITIES.filter(c=>['home','union','free'].includes(access(user.passports, c.country))).length;
+    $('doors-sub').textContent = 'your passport opens ' + open + ' of ' + CITIES.length + ' of these cities without a visa';
+  } else {
+    $('doors-sub').textContent = '';
+  }
   const list = $('match-list');
   list.innerHTML = matches.map((m,idx)=>{
     const c = m.city;
@@ -3561,12 +3752,16 @@ function renderResults(){
       '<div class="rail"><i data-w="'+v+'"></i></div></div>').join('');
     const fieldNote = (answers.field && c.ind.includes(answers.field))
       ? ' <strong style="color:var(--amber);font-style:normal;font-family:Karla,sans-serif;font-size:.8rem;letter-spacing:.06em;">&#9679; strong for your field</strong>' : '';
+    const acc = (user.passports && user.passports.length) ? access(user.passports, c.country) : 'unknown';
+    const visaNote = acc === 'unknown' ? '' :
+      ' <strong style="color:'+(acc==='home'||acc==='union'||acc==='free' ? 'var(--glass)' : 'var(--ink-faint)')+
+      ';font-style:normal;font-family:Karla,sans-serif;font-size:.8rem;letter-spacing:.06em;">&#9906; '+ACCESS_LABEL[acc]+'</strong>';
     return '<article class="match">'+
       '<div class="strip"><canvas class="city-sky" data-city="'+idx+'" height="150" style="animation-duration:'+(62+idx*9)+'s"></canvas></div>'+
       '<div class="match-body">'+
       '<div class="match-top"><h3 class="match-name">'+c.name+'<small>'+c.country+'</small></h3>'+
       '<div class="match-pct">'+m.score+'<small> % match</small></div></div>'+
-      '<p class="match-why">'+c.why+fieldNote+'</p>'+
+      '<p class="match-why">'+c.why+fieldNote+visaNote+'</p>'+
       '<div class="fitbars">'+bars+'</div>'+
       '<button class="jobs-btn" data-city="'+idx+'">See jobs in '+c.name+' &rarr;</button> '+
       '<button class="jobs-btn homes-link" data-city="'+idx+'">Find a home &rarr;</button>'+
@@ -3618,10 +3813,12 @@ function renderCompare(){
   }).join('');
 
   const FACTS = [['pop','Metro population'],['lang','Language'],['rent','One-bed rent · Numbeo'],['sun','Sunshine hours a year']];
+  const va = c => (user.passports && user.passports.length) ? (ACCESS_LABEL[access(user.passports, c.country)] || '—') : '—';
   const fmt = (v,k)=> k==='sun' ? Number(v).toLocaleString('en-US')+' h' : v;
   $('cmp-facts').innerHTML = FACTS.map(([k,label])=>
     '<div class="cmp-fact"><div class="v a">'+fmt(A.city.f[k],k)+'</div><div class="k">'+label+'</div><div class="v">'+fmt(B.city.f[k],k)+'</div></div>'
-  ).join('');
+  ).join('') +
+  '<div class="cmp-fact"><div class="v a">'+va(A.city)+'</div><div class="k">Visa, for your passport</div><div class="v">'+va(B.city)+'</div></div>';
 }
 
 
@@ -3982,6 +4179,16 @@ $('reveal').onclick = endReveal;
 
 $('peek-close').onclick = ()=> $('peek-modal').classList.remove('on');
 $('peek-modal').onclick = e=>{ if (e.target === $('peek-modal')) $('peek-modal').classList.remove('on'); };
+/* e-transfer address for donations — set it and the support link appears */
+const DONATE_EMAIL = '';
+if (DONATE_EMAIL){
+  $('donate-link').hidden = false;
+  $('donate-link').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(DONATE_EMAIL); toast('e-transfer address copied — thank you ♥'); }
+    catch(e){ window.prompt('Send an e-transfer to:', DONATE_EMAIL); }
+  };
+}
+
 $('how-open').onclick = ()=> $('how-modal').classList.add('on');
 $('how-close').onclick = ()=> $('how-modal').classList.remove('on');
 $('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };

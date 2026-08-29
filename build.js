@@ -9,7 +9,7 @@
                         wrapper supplies doctype/html/head/body itself */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
-const ORDER = ['util','data','questions','scoring','skyline','audio','homes','jobs','main'];
+const ORDER = ['util','data','questions','visas','scoring','skyline','audio','homes','jobs','main'];
 
 const strip = src => src.split('\n').filter(l => {
   const t = l.trim();

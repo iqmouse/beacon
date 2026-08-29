@@ -53,6 +53,9 @@ The full explanation lives in the app under **"how the light works."**
 - **Safety** — Numbeo Safety Index (~20 gaps filled with country-informed estimates)
 - **Sunshine** — Wikipedia climate-normal tables
 - **Diversity** — authored 0–10 judgments (no credible single global index exists)
+- **Visas** — group-level tourist-entry rules: passport blocs (EU freedom of
+  movement, Common Travel Area, Mercosur residence, trans-Tasman) plus each
+  country's typical entry list; coarse by design and caveated in-app
 - **City personalities, voice lines, neighborhoods** — hand-authored
 
 ## Running it
@@ -104,7 +107,7 @@ index.html          dev entry (markup + module script)
 styles/beacon.css   all styling
 src/util.js         $, store, clamp
 src/data.js         173 cities, fields, roles, continents, pay formula
-src/questions.js    the 26 questions
+src/questions.js    the 27 questions
 src/scoring.js      the matching engine — pure, DOM-free, fully tested
 src/skyline.js      seeded generative skylines
 src/audio.js        generative score + reactive UI sound

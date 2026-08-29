@@ -2,6 +2,7 @@
    Ported verbatim from the verified in-app scorer; only the implicit
    globals (user, answers) became explicit parameters. */
 import { clamp } from './util.js';
+import { resolvePassports, access, visaFit } from './visas.js';
 
 export const DIMS = ['pace','nature','culture','social','warmth','afford','food','transit','openness','scale','safe','div'];
 
@@ -9,7 +10,7 @@ export const DIM_LABELS = {
   pace:'Pace of life', nature:'Nature', culture:'Culture', social:'Social scene',
   warmth:'Climate', afford:'Cost of living', food:'Food scene',
   transit:'Getting around', openness:'Ease of arriving', scale:'City size',
-  safe:'Safety', div:'Diversity', lang:'Language ease'
+  safe:'Safety', div:'Diversity', lang:'Language ease', visa:'Visa ease'
 };
 
 export const WEIGHTS = {
@@ -56,6 +57,7 @@ export function buildUser(answers, QUESTIONS){
   user.learn = [9,6,3,0][answers.langlearn ?? 1];
   user.trade = ['culture','cheap','nature','none'][answers.safetrade ?? 3];
   user.qolDims = [['transit','safe'],['food','culture'],['nature','transit'],null][answers.worthit ?? 0];
+  user.passports = resolvePassports(answers.passports);
   return user;
 }
 
@@ -98,11 +100,14 @@ export function scoreCity(c, user, fieldId){
     sum += fit * WEIGHTS[k];
     wsum += WEIGHTS[k];
   }
+  const hasPass = user.passports && user.passports.length;
   const extras = [
     ['lang',   langFit(c, user), 1.2],
     ['afford', costFit(c, user), 1.15],
     ['safe',   safeFit(c, user), .7 + .06*user.safe],
     ['div',    divFit(c, user), .3 + .07*user.div],
+    /* visa ease: a paperwork question, weighted only when we know the passport */
+    ['visa',   hasPass ? visaFit(access(user.passports, c.country)) : 1, hasPass ? 1.0 : 0],
   ];
   for (const [k,f,w] of extras){
     fits[k] = Math.round(f*100);

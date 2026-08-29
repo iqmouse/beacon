@@ -75,6 +75,9 @@ export const QUESTIONS = [
       {t:'Doable, but it’d wear on me', s:'small talk matters to you more than you’d think', fx:{}},
       {t:'Honestly, a dealbreaker', s:'you need to actually talk to people', fx:{}},
     ]},
+  { type:'multichips', key:'passports',
+    title:'Which passports do you hold?',
+    opts:['United States','Canada','United Kingdom','Ireland','Germany','France','Spain','Portugal','Italy','Netherlands','Another EU / EEA country','Switzerland','Australia','New Zealand','Japan','South Korea','Singapore','Malaysia','China','India','Thailand','Vietnam','Philippines','Indonesia','Brazil','Argentina','Mexico','Colombia','Chile','Turkey','United Arab Emirates','Israel','South Africa','Nigeria','Kenya','Egypt','Pakistan','Somewhere else'] },
   { type:'cards', key:'friday',
     title:'Friday, eleven p.m. Where are you?',
     opts:[

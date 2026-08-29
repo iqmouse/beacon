@@ -6,6 +6,7 @@ import { drawCitySky, drawHomePortrait } from './skyline.js';
 import { startAudio, SFX } from './audio.js';
 import { PORTALS, baseRent, genHomes, HOME_TYPES } from './homes.js';
 import { buildJobs, altLabel } from './jobs.js';
+import { access, ACCESS_LABEL } from './visas.js';
 
 /* ================= state ================= */
 
@@ -368,6 +369,12 @@ function endReveal(){
 
 function renderResults(){
   $('top-city-script').textContent = matches[0].city.name;
+  if (user.passports && user.passports.length){
+    const open = CITIES.filter(c=>['home','union','free'].includes(access(user.passports, c.country))).length;
+    $('doors-sub').textContent = 'your passport opens ' + open + ' of ' + CITIES.length + ' of these cities without a visa';
+  } else {
+    $('doors-sub').textContent = '';
+  }
   const list = $('match-list');
   list.innerHTML = matches.map((m,idx)=>{
     const c = m.city;
@@ -377,12 +384,16 @@ function renderResults(){
       '<div class="rail"><i data-w="'+v+'"></i></div></div>').join('');
     const fieldNote = (answers.field && c.ind.includes(answers.field))
       ? ' <strong style="color:var(--amber);font-style:normal;font-family:Karla,sans-serif;font-size:.8rem;letter-spacing:.06em;">&#9679; strong for your field</strong>' : '';
+    const acc = (user.passports && user.passports.length) ? access(user.passports, c.country) : 'unknown';
+    const visaNote = acc === 'unknown' ? '' :
+      ' <strong style="color:'+(acc==='home'||acc==='union'||acc==='free' ? 'var(--glass)' : 'var(--ink-faint)')+
+      ';font-style:normal;font-family:Karla,sans-serif;font-size:.8rem;letter-spacing:.06em;">&#9906; '+ACCESS_LABEL[acc]+'</strong>';
     return '<article class="match">'+
       '<div class="strip"><canvas class="city-sky" data-city="'+idx+'" height="150" style="animation-duration:'+(62+idx*9)+'s"></canvas></div>'+
       '<div class="match-body">'+
       '<div class="match-top"><h3 class="match-name">'+c.name+'<small>'+c.country+'</small></h3>'+
       '<div class="match-pct">'+m.score+'<small> % match</small></div></div>'+
-      '<p class="match-why">'+c.why+fieldNote+'</p>'+
+      '<p class="match-why">'+c.why+fieldNote+visaNote+'</p>'+
       '<div class="fitbars">'+bars+'</div>'+
       '<button class="jobs-btn" data-city="'+idx+'">See jobs in '+c.name+' &rarr;</button> '+
       '<button class="jobs-btn homes-link" data-city="'+idx+'">Find a home &rarr;</button>'+
@@ -434,10 +445,12 @@ function renderCompare(){
   }).join('');
 
   const FACTS = [['pop','Metro population'],['lang','Language'],['rent','One-bed rent · Numbeo'],['sun','Sunshine hours a year']];
+  const va = c => (user.passports && user.passports.length) ? (ACCESS_LABEL[access(user.passports, c.country)] || '—') : '—';
   const fmt = (v,k)=> k==='sun' ? Number(v).toLocaleString('en-US')+' h' : v;
   $('cmp-facts').innerHTML = FACTS.map(([k,label])=>
     '<div class="cmp-fact"><div class="v a">'+fmt(A.city.f[k],k)+'</div><div class="k">'+label+'</div><div class="v">'+fmt(B.city.f[k],k)+'</div></div>'
-  ).join('');
+  ).join('') +
+  '<div class="cmp-fact"><div class="v a">'+va(A.city)+'</div><div class="k">Visa, for your passport</div><div class="v">'+va(B.city)+'</div></div>';
 }
 
 
@@ -798,6 +811,16 @@ $('reveal').onclick = endReveal;
 
 $('peek-close').onclick = ()=> $('peek-modal').classList.remove('on');
 $('peek-modal').onclick = e=>{ if (e.target === $('peek-modal')) $('peek-modal').classList.remove('on'); };
+/* e-transfer address for donations — set it and the support link appears */
+const DONATE_EMAIL = '';
+if (DONATE_EMAIL){
+  $('donate-link').hidden = false;
+  $('donate-link').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(DONATE_EMAIL); toast('e-transfer address copied — thank you ♥'); }
+    catch(e){ window.prompt('Send an e-transfer to:', DONATE_EMAIL); }
+  };
+}
+
 $('how-open').onclick = ()=> $('how-modal').classList.add('on');
 $('how-close').onclick = ()=> $('how-modal').classList.remove('on');
 $('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };
