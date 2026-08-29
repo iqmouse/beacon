@@ -67,14 +67,18 @@ export function langFit(c, user){
   if (c.eng && user.langs.includes('english')) return .8 + .02*user.learn;
   return .3 + .06*user.learn;
 }
-/* cost: asymmetric — cheap is never penalized; expensive is only
-   forgiven where the cost buys the quality the user named */
+/* cost: strictly monotonic — a cheaper city NEVER scores worse on cost,
+   no matter how big the budget. Inside your comfort zone the slope is
+   gentle; beyond it the penalty steepens, softened only where the cost
+   buys the quality the user named. A big budget flattens the cliff —
+   it never turns expense into a virtue. */
 export function costFit(c, user){
   const tol = 2 + .8*user.tol;
-  if (c.cost <= tol) return 1;
+  const gentle = 1 - c.cost * .012;
+  if (c.cost <= tol) return gentle;
   const excess = c.cost - tol;
   const qol = user.qolDims ? (c.d[user.qolDims[0]] + c.d[user.qolDims[1]])/20 : 0;
-  return clamp(1 - excess * .13 * (1.35 - .85*qol), 0, 1);
+  return clamp(gentle - excess * .13 * (1.35 - .85*qol), 0, 1);
 }
 /* safety: a one-sided floor, softened by the user's chosen tradeoff */
 export function safeFit(c, user){

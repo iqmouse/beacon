@@ -888,7 +888,7 @@
     <h3>How the light works</h3>
     <p>No model, no black box, no keys &mdash; Beacon is a formula you could check by hand.</p>
     <p>Your twenty-six answers become a profile across thirteen dimensions. Every city carries researched numbers &mdash; Numbeo rents, cost-of-living and safety indexes, Wikipedia sunshine hours, its actual languages. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
-    <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way (cheaper than your comfort is never penalized, pricier is only forgiven when it buys the quality you named); <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
+    <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way: a cheaper city never scores worse, your budget only sets how steeply pricier places fall, and the quality you named softens that fall; <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
     <p><b>Visas</b> are group-level tourist-entry rules &mdash; passport blocs (EU freedom of movement, the Common Travel Area, Mercosur residence rights, trans-Tasman) plus each country&rsquo;s typical entry list. Coarse by design and worth double-checking against official sources before you book anything.</p>
     <p>The weighted average is raised to a power to spread the field, and that is your percentage &mdash; same answers, same result, every time. Jobs, pay bands, and homes are seeded formulas over each city&rsquo;s industries, cost index, and market rent.</p>
     <div class="row">
@@ -2758,14 +2758,18 @@ function langFit(c, user){
   if (c.eng && user.langs.includes('english')) return .8 + .02*user.learn;
   return .3 + .06*user.learn;
 }
-/* cost: asymmetric — cheap is never penalized; expensive is only
-   forgiven where the cost buys the quality the user named */
+/* cost: strictly monotonic — a cheaper city NEVER scores worse on cost,
+   no matter how big the budget. Inside your comfort zone the slope is
+   gentle; beyond it the penalty steepens, softened only where the cost
+   buys the quality the user named. A big budget flattens the cliff —
+   it never turns expense into a virtue. */
 function costFit(c, user){
   const tol = 2 + .8*user.tol;
-  if (c.cost <= tol) return 1;
+  const gentle = 1 - c.cost * .012;
+  if (c.cost <= tol) return gentle;
   const excess = c.cost - tol;
   const qol = user.qolDims ? (c.d[user.qolDims[0]] + c.d[user.qolDims[1]])/20 : 0;
-  return clamp(1 - excess * .13 * (1.35 - .85*qol), 0, 1);
+  return clamp(gentle - excess * .13 * (1.35 - .85*qol), 0, 1);
 }
 /* safety: a one-sided floor, softened by the user's chosen tradeoff */
 function safeFit(c, user){
@@ -3818,7 +3822,15 @@ function renderCompare(){
 
   $('cmp-dims').innerHTML = DIMS.map(k=>{
     const av = A.city.d[k], bv = B.city.d[k];
-    const aCloser = Math.abs(av - user[k]) <= Math.abs(bv - user[k]);
+    let aCloser;
+    if (k === 'afford'){
+      /* cost is one-way: amber goes to the city that fits your budget
+         better, and on a tie to the cheaper one — never to expense */
+      const fA = costFit(A.city, user), fB = costFit(B.city, user);
+      aCloser = fA > fB || (fA === fB && A.city.cost <= B.city.cost);
+    } else {
+      aCloser = Math.abs(av - user[k]) <= Math.abs(bv - user[k]);
+    }
     return '<div class="cmp-row">'+
       '<div class="cmp-rail L'+(aCloser?' win':'')+'"><i style="width:'+(av*10)+'%"></i></div>'+
       '<div class="cmp-mid">'+DIM_LABELS[k]+'</div>'+

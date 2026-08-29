@@ -1,7 +1,7 @@
 import { $, store, clamp } from './util.js';
 import { FIELDS, CITIES, ROLES, MODES, payBand, CONTINENT_OF, CONTS } from './data.js';
 import { QUESTIONS } from './questions.js';
-import { DIMS, DIM_LABELS, buildUser, rankAll, traitWords } from './scoring.js';
+import { DIMS, DIM_LABELS, buildUser, rankAll, traitWords, costFit } from './scoring.js';
 import { drawCitySky, drawHomePortrait } from './skyline.js';
 import { startAudio, SFX } from './audio.js';
 import { PORTALS, baseRent, genHomes, HOME_TYPES } from './homes.js';
@@ -436,7 +436,15 @@ function renderCompare(){
 
   $('cmp-dims').innerHTML = DIMS.map(k=>{
     const av = A.city.d[k], bv = B.city.d[k];
-    const aCloser = Math.abs(av - user[k]) <= Math.abs(bv - user[k]);
+    let aCloser;
+    if (k === 'afford'){
+      /* cost is one-way: amber goes to the city that fits your budget
+         better, and on a tie to the cheaper one — never to expense */
+      const fA = costFit(A.city, user), fB = costFit(B.city, user);
+      aCloser = fA > fB || (fA === fB && A.city.cost <= B.city.cost);
+    } else {
+      aCloser = Math.abs(av - user[k]) <= Math.abs(bv - user[k]);
+    }
     return '<div class="cmp-row">'+
       '<div class="cmp-rail L'+(aCloser?' win':'')+'"><i style="width:'+(av*10)+'%"></i></div>'+
       '<div class="cmp-mid">'+DIM_LABELS[k]+'</div>'+

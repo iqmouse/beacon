@@ -94,11 +94,35 @@ test('English-friendliness earns partial credit for English speakers only', () =
 
 /* ---------------- cost: asymmetric by design ---------------- */
 
-test('cheaper than your comfort is never penalized', () => {
-  const user = u({ budget:8 });
-  for (const c of CITIES) {
-    if (c.cost <= 2 + 0.8 * user.tol) assert.equal(costFit(c, user), 1, c.name);
+test('cost fit is monotonic: cheaper never scores worse, at any budget (QoL held equal)', () => {
+  /* worthit:3 = 'cheap is the feature' — no quality dividend, so the fit
+     must fall purely with cost. The dividend (worthit 0-2) is ALLOWED to
+     lift a pricier city that delivers the named quality — that is the
+     spec — but never inside the comfort zone, tested below. */
+  for (const budget of [0, 5, 10]) {
+    const user = u({ budget, worthit:3 });
+    const sorted = CITIES.slice().sort((a, b) => a.cost - b.cost);
+    for (let i = 1; i < sorted.length; i++) {
+      assert.ok(costFit(sorted[i - 1], user) >= costFit(sorted[i], user),
+        budget + ': ' + sorted[i - 1].name + ' vs ' + sorted[i].name);
+    }
   }
+  /* inside the comfort zone the dividend never applies: monotonic there
+     regardless of the worthit answer */
+  const rich = u({ budget:10, worthit:0 });
+  const inside = CITIES.filter(c => c.cost <= 2 + .8 * rich.tol)
+    .sort((a, b) => a.cost - b.cost);
+  for (let i = 1; i < inside.length; i++) {
+    assert.ok(costFit(inside[i - 1], rich) >= costFit(inside[i], rich),
+      inside[i - 1].name + ' vs ' + inside[i].name);
+  }
+});
+
+test('the reported case: big budget must not score Zurich above Prague on cost', () => {
+  const user = u({ budget:10, worthit:3 });
+  const zurich = CITIES.find(c => c.name === 'Zurich');
+  const prague = CITIES.find(c => c.name === 'Prague');
+  assert.ok(costFit(prague, user) > costFit(zurich, user));
 });
 
 test('a big budget stops the penalty but never makes expensive rank better', () => {
