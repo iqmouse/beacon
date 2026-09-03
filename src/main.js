@@ -820,12 +820,16 @@ $('reveal').onclick = endReveal;
 $('peek-close').onclick = ()=> $('peek-modal').classList.remove('on');
 $('peek-modal').onclick = e=>{ if (e.target === $('peek-modal')) $('peek-modal').classList.remove('on'); };
 /* e-transfer address for donations — set it and the support link appears */
-const DONATE_EMAIL = '';
+const DONATE_EMAIL = 'mikail.iqbal08@gmail.com';
 if (DONATE_EMAIL){
   $('donate-link').hidden = false;
-  $('donate-link').onclick = async ()=>{
-    try{ await navigator.clipboard.writeText(DONATE_EMAIL); toast('e-transfer address copied — thank you ♥'); }
-    catch(e){ window.prompt('Send an e-transfer to:', DONATE_EMAIL); }
+  $('donate-email').value = DONATE_EMAIL;
+  $('donate-link').onclick = ()=> $('donate-modal').classList.add('on');
+  $('donate-close').onclick = ()=> $('donate-modal').classList.remove('on');
+  $('donate-modal').onclick = e=>{ if (e.target === $('donate-modal')) $('donate-modal').classList.remove('on'); };
+  $('donate-copy').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(DONATE_EMAIL); toast('copied — thank you ♥'); }
+    catch(e){ $('donate-email').select(); toast('select and copy — thank you ♥'); }
   };
 }
 
@@ -834,7 +838,7 @@ $('how-close').onclick = ()=> $('how-modal').classList.remove('on');
 $('how-modal').onclick = e=>{ if (e.target === $('how-modal')) $('how-modal').classList.remove('on'); };
 
 document.addEventListener('keydown', e=>{
-  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); $('peek-modal').classList.remove('on'); }
+  if (e.key === 'Escape'){ closeDrawer(); $('prof-modal').classList.remove('on'); $('how-modal').classList.remove('on'); $('peek-modal').classList.remove('on'); $('donate-modal').classList.remove('on'); }
   if (e.key === 'Enter' && activeView === 'view-quiz' && !$('q-next').disabled
       && document.activeElement.tagName !== 'BUTTON'){
     $('q-next').click();
