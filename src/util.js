@@ -1,3 +1,6 @@
+/* Small shared helpers. esc() and safeHttpUrl() are the security
+   boundary for everything that reaches innerHTML — see the README's
+   security notes before touching them. */
 export const $ = id => document.getElementById(id);
 
 export const store = {

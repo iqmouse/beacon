@@ -943,6 +943,9 @@
 </div>
 
 <script>
+/* Small shared helpers. esc() and safeHttpUrl() are the security
+   boundary for everything that reaches innerHTML — see the README's
+   security notes before touching them. */
 const $ = id => document.getElementById(id);
 
 const store = {
@@ -992,6 +995,12 @@ function mergeBooks(account, local){
 
 
 
+export /* Beacon data — 173 cities, hand-authored where judgment is honest
+   and researched where numbers exist (rents, cost, safety: Numbeo;
+   sunshine: Wikipedia climate tables — provenance in the README).
+   Each city: ten 0-10 personality dims, languages, cost index,
+   industries, real neighborhoods, five fictional employers, a voice
+   line, and quick facts. */
 const FIELDS = [
   {id:'tech',    label:'Tech & product'},
   {id:'creative',label:'Design & creative'},
@@ -2440,6 +2449,10 @@ const CONTINENT_OF = {
 const CONTS = ['North America','South America','Europe','Africa','Asia','Oceania'];
 
 
+/* The 27 questions. Order and option order are load-bearing: answers
+   store option indexes, and sliders set a dimension's base before the
+   card nudges refine it. Change wording freely; change structure
+   carefully. */
 const QUESTIONS = [
   { type:'cards', key:'morning',
     title:'Free morning, nothing planned. Where do you actually end up?',
@@ -2775,9 +2788,12 @@ function visaFit(a){
 }
 
 
-/* Beacon scoring — pure and DOM-free so it runs under node --test.
-   Ported verbatim from the verified in-app scorer; only the implicit
-   globals (user, answers) became explicit parameters. */
+/* Beacon scoring — the whole matching engine, pure and DOM-free.
+   Twenty-seven answers in, a ranked list of 173 cities out, and not a
+   single Math.random() on the way: same answers, same result, forever.
+   The interesting parts are the asymmetric fits below — language is a
+   capability, cost is one-way, safety is a floor with a personal
+   escape valve, diversity only counts if you care. */
 
 const DIMS = ['pace','nature','culture','social','warmth','afford','food','transit','openness','scale','safe','div'];
 
@@ -3391,6 +3407,8 @@ function slug(s){
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 }
 function baseRent(city){ return parseInt(String(city.f.rent).replace(/[^0-9]/g,''), 10) || 1000; }
+/* Legacy fallback only: every city now carries an explicit, real
+   `hoods` list; this derivation from company names stays for safety. */
 function hoodsFor(city){
   const suf = /\s(Studio|Works|Labs|Collective|& Co|Digital|Capital|House|Group|Atelier|Systems|Craft|Kollektiv|& Fils|& Main|& Field|& Pearl)$/;
   const hs = city.cos.map(c=>c.replace(suf,'').trim()).filter(h=>h.length>2);
@@ -3477,6 +3495,10 @@ function altLabel(fieldId){
 }
 
 
+/* Beacon — views, rendering, and wiring. Everything with a DOM lives
+   here; everything testable lives in the other modules. The app runs
+   fully client-side; an optional /api (Cloudflare Pages Functions)
+   adds accounts and live listings where it exists. */
 
 /* ================= state ================= */
 
@@ -3522,7 +3544,6 @@ let AF = null;                 /* artifact capability namespace, or null */
 let BOOK = {v:1, profiles:{}};
 let activeProfile = store.get('beacon-profile') || null;
 let syncState = 'local';       /* local | cloud | saving | readonly */
-let bookLoaded = false;
 
 function setSyncChip(){
   const chip = $('sync-chip');
@@ -3623,7 +3644,7 @@ function renderProfiles(){
 
 function initBook(){
   try{ const local = JSON.parse(store.get('beacon-book')||'null'); if (local && local.profiles) BOOK = local; }catch(e){}
-  const arm = ()=>{ bookLoaded = true; if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile); setSyncChip(); };
+  const arm = ()=>{ if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile); setSyncChip(); };
   if (!(window.claude && window.claude.use)){ arm(); return; }
   window.claude.use('artifact').then(a=>{
     AF = a;

@@ -1,3 +1,7 @@
+/* Beacon — views, rendering, and wiring. Everything with a DOM lives
+   here; everything testable lives in the other modules. The app runs
+   fully client-side; an optional /api (Cloudflare Pages Functions)
+   adds accounts and live listings where it exists. */
 import { $, store, clamp, esc, safeHttpUrl, mergeBooks } from './util.js';
 import { FIELDS, CITIES, ROLES, MODES, payBand, CONTINENT_OF, CONTS } from './data.js';
 import { QUESTIONS } from './questions.js';
@@ -52,7 +56,6 @@ let AF = null;                 /* artifact capability namespace, or null */
 let BOOK = {v:1, profiles:{}};
 let activeProfile = store.get('beacon-profile') || null;
 let syncState = 'local';       /* local | cloud | saving | readonly */
-let bookLoaded = false;
 
 function setSyncChip(){
   const chip = $('sync-chip');
@@ -153,7 +156,7 @@ function renderProfiles(){
 
 function initBook(){
   try{ const local = JSON.parse(store.get('beacon-book')||'null'); if (local && local.profiles) BOOK = local; }catch(e){}
-  const arm = ()=>{ bookLoaded = true; if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile); setSyncChip(); };
+  const arm = ()=>{ if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile); setSyncChip(); };
   if (!(window.claude && window.claude.use)){ arm(); return; }
   window.claude.use('artifact').then(a=>{
     AF = a;

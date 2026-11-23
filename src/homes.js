@@ -28,6 +28,8 @@ export function slug(s){
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 }
 export function baseRent(city){ return parseInt(String(city.f.rent).replace(/[^0-9]/g,''), 10) || 1000; }
+/* Legacy fallback only: every city now carries an explicit, real
+   `hoods` list; this derivation from company names stays for safety. */
 export function hoodsFor(city){
   const suf = /\s(Studio|Works|Labs|Collective|& Co|Digital|Capital|House|Group|Atelier|Systems|Craft|Kollektiv|& Fils|& Main|& Field|& Pearl)$/;
   const hs = city.cos.map(c=>c.replace(suf,'').trim()).filter(h=>h.length>2);

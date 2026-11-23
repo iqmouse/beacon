@@ -1,3 +1,7 @@
+/* The 27 questions. Order and option order are load-bearing: answers
+   store option indexes, and sliders set a dimension's base before the
+   card nudges refine it. Change wording freely; change structure
+   carefully. */
 export const QUESTIONS = [
   { type:'cards', key:'morning',
     title:'Free morning, nothing planned. Where do you actually end up?',

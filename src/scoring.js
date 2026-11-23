@@ -1,6 +1,9 @@
-/* Beacon scoring — pure and DOM-free so it runs under node --test.
-   Ported verbatim from the verified in-app scorer; only the implicit
-   globals (user, answers) became explicit parameters. */
+/* Beacon scoring — the whole matching engine, pure and DOM-free.
+   Twenty-seven answers in, a ranked list of 173 cities out, and not a
+   single Math.random() on the way: same answers, same result, forever.
+   The interesting parts are the asymmetric fits below — language is a
+   capability, cost is one-way, safety is a floor with a personal
+   escape valve, diversity only counts if you care. */
 import { clamp } from './util.js';
 import { resolvePassports, access, visaFit } from './visas.js';
 

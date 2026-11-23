@@ -1,0 +1,20 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests (node --test, zero dependencies)
+        run: npm test
+      - name: Build (single-file bundle + 173 city pages)
+        run: npm run build
+      - name: The bundle must parse standalone
+        run: node -e "new Function(require('fs').readFileSync('dist/index.html','utf8').match(/<script>\n([\s\S]*)\n<\/script>/)[1]); console.log('bundle parses')"
