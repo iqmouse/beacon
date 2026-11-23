@@ -4,15 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beacon — find the city that feels like you</title>
-<meta name="description" content="Twenty-six unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
+<meta name="description" content="Twenty-seven unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
 <meta name="theme-color" content="#0F1B22">
 <link rel="canonical" href="https://beacon-ejo.pages.dev/">
 <meta property="og:title" content="Beacon — find the city that feels like you">
 <meta property="og:description" content="A breezy, fully deterministic city-matching app. Same answers, same result, every time.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://beacon-ejo.pages.dev/">
+<meta property="og:site_name" content="Beacon">
+<meta property="og:image" content="https://beacon-ejo.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Beacon — find the city that feels like you. A glowing wordmark over a dusk skyline.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F1B22'/%3E%3Cpath d='M32 28 L16 58 H48 Z' fill='%23F0B24E' fill-opacity='.22'/%3E%3Ccircle cx='32' cy='27' r='7' fill='%23F0B24E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ephesis&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400;1,6..72,500&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="styles/beacon.css">
 </head>
@@ -64,13 +73,13 @@
     <div class="cta-row">
       <button class="btn" id="begin">Begin the search</button>
     </div>
-    <p class="whisper">twenty-seven questions &middot; one unhurried wander</p>
+    <p class="whisper">twenty-seven questions &middot; about five minutes &middot; free, no sign-up</p>
   </section>
 
   <!-- QUIZ -->
   <section class="view" id="view-quiz">
     <div class="progress">
-      <span class="count" id="prog-count">1 / 20</span>
+      <span class="count" id="prog-count">1 / 27</span>
       <div class="bar"><i id="prog-fill"></i></div>
     </div>
     <div id="q-holder"></div>
@@ -148,19 +157,20 @@
   <!-- JOBS -->
   <section class="view" id="view-jobs">
     <div class="jobs-head">
-      <p class="eyebrow">Now hiring in</p>
+      <p class="eyebrow">What work looks like in</p>
       <h2 class="script" id="jobs-city">&nbsp;</h2>
       <p class="jobs-sub" id="jobs-sub"></p>
       <p class="src-note" id="jobs-src"></p>
     </div>
     <div class="jobs-strip"><canvas id="jobs-canvas" height="150"></canvas></div>
     <div class="job-list" id="job-list"></div>
+    <div class="portal-row" id="jobs-links"></div>
     <div class="jobs-nav">
       <button class="ghost" id="jobs-back">&larr; back to matches</button>
       <button class="ghost" id="jobs-homes">find a home here</button>
       <button class="ghost" id="jobs-restart">start over</button>
     </div>
-    <p class="foot-note">Listings and pay are a deterministic formula over each city&rsquo;s industries and cost-of-living index &mdash; no feed, no keys, no model.</p>
+    <p class="foot-note" id="jobs-foot"></p>
   </section>
 
   <!-- HOMES -->
@@ -203,6 +213,7 @@
   <div class="modal">
     <h3>Your Beacon book <span class="sync-chip" id="sync-chip">this device</span></h3>
     <p id="prof-copy">Keep your lantern, your matches, and your saved homes under a name. Profiles are open to anyone this page is shared with &mdash; a lantern, not a lockbox.</p>
+    <div id="acct-body"></div>
     <div id="prof-body"></div>
     <div class="prof-new">
       <input id="prof-name" placeholder="a name for your search" maxlength="24" autocomplete="off" spellcheck="false">
@@ -232,7 +243,7 @@
 <div class="modal-wrap" id="donate-modal">
   <div class="modal">
     <h3>Support Beacon &hearts;</h3>
-    <p>Beacon is free, keyless, and stays that way. If it helped you find your city, an Interac e-transfer is warmly appreciated:</p>
+    <p>Beacon is free and always will be &mdash; no accounts required, no ads, nothing sold. If it helped you find your city and you bank in Canada, an Interac e-transfer is warmly appreciated:</p>
     <input id="donate-email" readonly value="" style="text-align:center;font-weight:600">
     <div class="row">
       <button class="btn2" id="donate-copy">copy address</button>
@@ -245,7 +256,7 @@
   <div class="modal">
     <h3>How the light works</h3>
     <p>No model, no black box, no keys &mdash; Beacon is a formula you could check by hand.</p>
-    <p>Your twenty-six answers become a profile across thirteen dimensions. Every city carries researched numbers &mdash; Numbeo rents, cost-of-living and safety indexes, Wikipedia sunshine hours, its actual languages. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
+    <p>Your twenty-seven answers become a profile across fourteen dimensions. The sourced numbers &mdash; rents, cost of living, safety, sunshine &mdash; come from Numbeo and Wikipedia climate tables (a handful of smaller cities carry marked estimates). The rest &mdash; pace, nature, culture, food, diversity and their kin &mdash; are our own hand-authored 0&ndash;10 judgments, and we say so. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
     <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way: a cheaper city never scores worse, your budget only sets how steeply pricier places fall, and the quality you named softens that fall; <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
     <p><b>Visas</b> are group-level tourist-entry rules &mdash; passport blocs (EU freedom of movement, the Common Travel Area, Mercosur residence rights, trans-Tasman) plus each country&rsquo;s typical entry list. Coarse by design and worth double-checking against official sources before you book anything.</p>
     <p>The weighted average is raised to a power to spread the field, and that is your percentage &mdash; same answers, same result, every time. Jobs, pay bands, and homes are seeded formulas over each city&rsquo;s industries, cost index, and market rent.</p>

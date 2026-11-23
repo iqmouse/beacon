@@ -117,12 +117,37 @@ test/               node --test suites
 build.js            single-file bundler → dist/index.html
 ```
 
+## The API (Cloudflare Pages Functions + D1)
+
+`functions/api/[[path]].js` adds an optional backend on the same free
+Pages project — the client detects `/api/health` and lights features up;
+everywhere else (the claude.ai artifact, a saved file) Beacon behaves
+exactly as before.
+
+- **Accounts** — email/password (PBKDF2-SHA256, 150k iterations, WebCrypto),
+  30-day sessions in D1 behind an `HttpOnly; Secure; SameSite=Lax` cookie
+  scoped to `/api`. Sign in from the Beacon book and your lantern follows
+  you across devices (`GET/PUT /api/book`).
+- **Live jobs** — `GET /api/jobs` proxies Adzuna with keys held in Pages
+  secrets (never in this repo or the client), normalizes listings, and
+  caches per city+field for six hours to respect the free tier. The
+  deterministic formula remains the floor: live listings only ride on top
+  where coverage exists.
+- **Housing stays curated by design** — no viable free listings API
+  exists; the illustrated samples plus real-portal links remain the
+  honest offer.
+
+Setup (one-time): `npx wrangler d1 create beacon-db`, put its id in
+`wrangler.toml`, `npx wrangler d1 execute beacon-db --remote --file=schema.sql`,
+and `npx wrangler pages secret put ADZUNA_APP_ID` / `ADZUNA_APP_KEY`.
+Local: `npx wrangler pages dev dist` after applying the schema with `--local`.
+
 ## Roadmap
 
 - [x] Split the single file into modules (data / scoring / audio / skylines / views)
-- [x] A test suite around the scorer (25 tests, `node --test`, zero deps)
-- [ ] Real authentication for profiles *(needs hosting)*
-- [ ] Live job & housing feeds behind a small server *(needs hosting; keys stay server-side)*
+- [x] A test suite around the scorer (`node --test`, zero deps)
+- [x] Real authentication for profiles (Pages Functions + D1)
+- [x] Live job feeds behind a small server (Adzuna via proxy; keys in secrets)
 
 ---
 

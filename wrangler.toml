@@ -2,3 +2,8 @@
 name = "beacon"
 compatibility_date = "2026-08-01"
 pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "beacon-db"
+database_id = "4bdf29eb-de15-40a5-b385-df04426f678f"

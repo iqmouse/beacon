@@ -4,15 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beacon — find the city that feels like you</title>
-<meta name="description" content="Twenty-six unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
+<meta name="description" content="Twenty-seven unhurried questions, 173 researched cities, and a transparent formula — no AI, no accounts required. Find the city that feels like you, then the work and home waiting there.">
 <meta name="theme-color" content="#0F1B22">
 <link rel="canonical" href="https://beacon-ejo.pages.dev/">
 <meta property="og:title" content="Beacon — find the city that feels like you">
 <meta property="og:description" content="A breezy, fully deterministic city-matching app. Same answers, same result, every time.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://beacon-ejo.pages.dev/">
+<meta property="og:site_name" content="Beacon">
+<meta property="og:image" content="https://beacon-ejo.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Beacon — find the city that feels like you. A glowing wordmark over a dusk skyline.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230F1B22'/%3E%3Cpath d='M32 28 L16 58 H48 Z' fill='%23F0B24E' fill-opacity='.22'/%3E%3Ccircle cx='32' cy='27' r='7' fill='%23F0B24E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ephesis&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400;1,6..72,500&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
   /* ---------- tokens ---------- */
@@ -110,10 +119,11 @@
   @keyframes sweep{ from{rotate:0deg} to{rotate:360deg} }
   .drift{
     position:fixed; z-index:0; pointer-events:none; border-radius:50%;
-    filter:blur(60px);
+    /* a soft gradient, not filter:blur — the filter re-blurs every
+       animation frame on low-end devices */
   }
-  .drift.a{ width:44vmin; height:44vmin; background:var(--haze1); left:-10vmin; top:12vh; animation:driftA 34s ease-in-out infinite alternate;}
-  .drift.b{ width:36vmin; height:36vmin; background:var(--haze2); right:-8vmin; bottom:8vh; animation:driftB 41s ease-in-out infinite alternate;}
+  .drift.a{ width:60vmin; height:60vmin; background:radial-gradient(circle, var(--haze1), transparent 65%); left:-18vmin; top:6vh; animation:driftA 34s ease-in-out infinite alternate;}
+  .drift.b{ width:52vmin; height:52vmin; background:radial-gradient(circle, var(--haze2), transparent 65%); right:-16vmin; bottom:2vh; animation:driftB 41s ease-in-out infinite alternate;}
   @keyframes driftA{ from{transform:translate(0,0)} to{transform:translate(9vmin,-7vmin)} }
   @keyframes driftB{ from{transform:translate(0,0)} to{transform:translate(-8vmin,6vmin)} }
 
@@ -154,14 +164,24 @@
     font-size:clamp(4.5rem, 14vw, 8.5rem);
     text-align:center; margin:0;
     position:relative;
+    min-height:1.2em;        /* the Ephesis swap must not shift the centred hero */
   }
+  /* a static glow; only an overlay's OPACITY animates — animating
+     text-shadow repaints the glyph on the main thread every frame */
   .wordmark .lit{
     color:inherit;
+    position:relative;
+    text-shadow:0 0 10px var(--amber-glow), 0 0 28px var(--amber-glow), 0 0 60px var(--amber-glow);
+  }
+  .wordmark .lit::after{
+    content:''; position:absolute; inset:-.45em;
+    background:radial-gradient(circle, var(--amber-glow), transparent 68%);
+    border-radius:50%; z-index:-1;
     animation:lampGlow 4.5s ease-in-out infinite;
   }
   @keyframes lampGlow{
-    0%,100%{ text-shadow:0 0 8px var(--amber-glow), 0 0 22px var(--amber-glow), 0 0 48px var(--amber-glow); }
-    50%    { text-shadow:0 0 12px var(--amber-soft), 0 0 34px var(--amber), 0 0 80px var(--amber-glow); }
+    0%,100%{ opacity:.35; }
+    50%    { opacity:1; }
   }
   h2.q-title{
     font-family:'Newsreader',Georgia,serif;
@@ -605,6 +625,17 @@
     color:var(--ink-faint); padding:.2rem .6rem; border-radius:999px; background:var(--track);
   }
   .sync-chip.on{ color:var(--amber); background:var(--amber-glow); }
+  .acct-box{
+    border:1px solid var(--card-edge); border-radius:12px;
+    padding: .8rem .9rem; margin-bottom: .9rem;
+  }
+  .acct-box .k{
+    font-size:.68rem; font-weight:600; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--ink-faint); margin-bottom:.5rem;
+  }
+  .acct-row{ display:flex; gap:.6rem; flex-wrap:wrap; }
+  .acct-row input{ flex:1; min-width:150px; }
+  .acct-err{ font-size:.8rem; color:var(--amber); margin:.5rem 0 0; }
 
   /* ---------- homes ---------- */
   .home-filters{
@@ -663,7 +694,7 @@
   .src-note{ text-align:center; font-size:.75rem; color:var(--ink-faint); margin:-.9rem 0 1.2rem; }
 
   @media (prefers-reduced-motion: reduce){
-    .beam,.drift,.wordmark .lit,.strip canvas,.jobs-strip canvas,.hero-strip canvas,.reveal-canvas-wrap canvas{ animation:none !important; }
+    .beam,.drift,.wordmark .lit,.wordmark .lit::after,.strip canvas,.jobs-strip canvas,.hero-strip canvas,.reveal-canvas-wrap canvas{ animation:none !important; }
     .wordmark .lit{ text-shadow:0 0 12px var(--amber-soft), 0 0 34px var(--amber), 0 0 80px var(--amber-glow); }
     .view.active,.match,.job,.reveal-name,.reveal .eyebrow,.reveal-sub,.reveal-hint{ animation-duration:.01s !important; animation-delay:0s !important; }
     *{ transition-duration:.01s !important; }
@@ -718,13 +749,13 @@
     <div class="cta-row">
       <button class="btn" id="begin">Begin the search</button>
     </div>
-    <p class="whisper">twenty-seven questions &middot; one unhurried wander</p>
+    <p class="whisper">twenty-seven questions &middot; about five minutes &middot; free, no sign-up</p>
   </section>
 
   <!-- QUIZ -->
   <section class="view" id="view-quiz">
     <div class="progress">
-      <span class="count" id="prog-count">1 / 20</span>
+      <span class="count" id="prog-count">1 / 27</span>
       <div class="bar"><i id="prog-fill"></i></div>
     </div>
     <div id="q-holder"></div>
@@ -802,19 +833,20 @@
   <!-- JOBS -->
   <section class="view" id="view-jobs">
     <div class="jobs-head">
-      <p class="eyebrow">Now hiring in</p>
+      <p class="eyebrow">What work looks like in</p>
       <h2 class="script" id="jobs-city">&nbsp;</h2>
       <p class="jobs-sub" id="jobs-sub"></p>
       <p class="src-note" id="jobs-src"></p>
     </div>
     <div class="jobs-strip"><canvas id="jobs-canvas" height="150"></canvas></div>
     <div class="job-list" id="job-list"></div>
+    <div class="portal-row" id="jobs-links"></div>
     <div class="jobs-nav">
       <button class="ghost" id="jobs-back">&larr; back to matches</button>
       <button class="ghost" id="jobs-homes">find a home here</button>
       <button class="ghost" id="jobs-restart">start over</button>
     </div>
-    <p class="foot-note">Listings and pay are a deterministic formula over each city&rsquo;s industries and cost-of-living index &mdash; no feed, no keys, no model.</p>
+    <p class="foot-note" id="jobs-foot"></p>
   </section>
 
   <!-- HOMES -->
@@ -857,6 +889,7 @@
   <div class="modal">
     <h3>Your Beacon book <span class="sync-chip" id="sync-chip">this device</span></h3>
     <p id="prof-copy">Keep your lantern, your matches, and your saved homes under a name. Profiles are open to anyone this page is shared with &mdash; a lantern, not a lockbox.</p>
+    <div id="acct-body"></div>
     <div id="prof-body"></div>
     <div class="prof-new">
       <input id="prof-name" placeholder="a name for your search" maxlength="24" autocomplete="off" spellcheck="false">
@@ -886,7 +919,7 @@
 <div class="modal-wrap" id="donate-modal">
   <div class="modal">
     <h3>Support Beacon &hearts;</h3>
-    <p>Beacon is free, keyless, and stays that way. If it helped you find your city, an Interac e-transfer is warmly appreciated:</p>
+    <p>Beacon is free and always will be &mdash; no accounts required, no ads, nothing sold. If it helped you find your city and you bank in Canada, an Interac e-transfer is warmly appreciated:</p>
     <input id="donate-email" readonly value="" style="text-align:center;font-weight:600">
     <div class="row">
       <button class="btn2" id="donate-copy">copy address</button>
@@ -899,7 +932,7 @@
   <div class="modal">
     <h3>How the light works</h3>
     <p>No model, no black box, no keys &mdash; Beacon is a formula you could check by hand.</p>
-    <p>Your twenty-six answers become a profile across thirteen dimensions. Every city carries researched numbers &mdash; Numbeo rents, cost-of-living and safety indexes, Wikipedia sunshine hours, its actual languages. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
+    <p>Your twenty-seven answers become a profile across fourteen dimensions. The sourced numbers &mdash; rents, cost of living, safety, sunshine &mdash; come from Numbeo and Wikipedia climate tables (a handful of smaller cities carry marked estimates). The rest &mdash; pace, nature, culture, food, diversity and their kin &mdash; are our own hand-authored 0&ndash;10 judgments, and we say so. Each dimension&rsquo;s fit is one minus the distance between you and the city, weighted by how much that dimension tends to matter.</p>
     <p>Four dimensions bend to your situation instead: <b>language</b> is a capability (shared tongue counts fully, English-friendliness partly, and your willingness to learn carries the rest); <b>cost</b> is one-way: a cheaper city never scores worse, your budget only sets how steeply pricier places fall, and the quality you named softens that fall; <b>safety</b> is a floor you set, softened by the tradeoff you chose; <b>diversity</b> counts exactly as much as you said it does.</p>
     <p><b>Visas</b> are group-level tourist-entry rules &mdash; passport blocs (EU freedom of movement, the Common Travel Area, Mercosur residence rights, trans-Tasman) plus each country&rsquo;s typical entry list. Coarse by design and worth double-checking against official sources before you book anything.</p>
     <p>The weighted average is raised to a power to spread the field, and that is your percentage &mdash; same answers, same result, every time. Jobs, pay bands, and homes are seeded formulas over each city&rsquo;s industries, cost index, and market rent.</p>
@@ -918,6 +951,44 @@ const store = {
 };
 
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+
+/* HTML-escape for every dynamic string that reaches innerHTML.
+   Server data, synced book data, and third-party job fields are all
+   untrusted text — this is the one gate they pass through. */
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
+  }[c]));
+}
+
+/* Only plain web links may become hrefs. */
+function safeHttpUrl(u){
+  try{
+    const p = new URL(String(u));
+    return (p.protocol === 'https:' || p.protocol === 'http:') ? p.href : null;
+  }catch(e){ return null; }
+}
+
+/* Sign-in must never eat this device's saves: union of two books.
+   Account scalars win; lanterns union by id. */
+function mergeBooks(account, local){
+  const out = { v: 1, profiles: {} };
+  const names = new Set([
+    ...Object.keys((account && account.profiles) || {}),
+    ...Object.keys((local && local.profiles) || {}),
+  ]);
+  for (const name of names){
+    const a = (account && account.profiles && account.profiles[name]) || null;
+    const l = (local && local.profiles && local.profiles[name]) || null;
+    if (!a){ out.profiles[name] = l; continue; }
+    if (!l){ out.profiles[name] = a; continue; }
+    const byId = arr => new Map((arr || []).map(x => [x.id, x]));
+    const union = (x, y) => [...new Map([...byId(y), ...byId(x)]).values()];
+    out.profiles[name] = { ...l, ...a,
+      jobs: union(a.jobs, l.jobs), homes: union(a.homes, l.homes) };
+  }
+  return out;
+}
 
 
 
@@ -2448,6 +2519,7 @@ const QUESTIONS = [
     ]},
   { type:'multichips', key:'passports',
     title:'Which passports do you hold?',
+    hint:'so we can show where you can live, work, or visit without a visa — "Somewhere else" is a fine answer',
     opts:['United States','Canada','United Kingdom','Ireland','Germany','France','Spain','Portugal','Italy','Netherlands','Another EU / EEA country','Switzerland','Australia','New Zealand','Japan','South Korea','Singapore','Malaysia','China','India','Thailand','Vietnam','Philippines','Indonesia','Brazil','Argentina','Mexico','Colombia','Chile','Turkey','United Arab Emirates','Israel','South Africa','Nigeria','Kenya','Egypt','Pakistan','Somewhere else'] },
   { type:'cards', key:'friday',
     title:'Friday, eleven p.m. Where are you?',
@@ -2486,7 +2558,7 @@ const QUESTIONS = [
     title:'A city should feel…',
     opts:[
       {t:'Brand new and still rising', s:'cranes everywhere, everything opening soon', fx:{scale:1,pace:1,openness:1}},
-      {t:'Properly old', s:'buildings older than your home country', fx:{culture:2,scale:-1}},
+      {t:'Properly old', s:'walls that have seen a few empires', fx:{culture:2,scale:-1}},
       {t:'Wild at the edges', s:'green creeping in wherever it can', fx:{nature:2}},
       {t:'A bit of everything, worn in', s:'nothing matches and somehow it works', fx:{culture:1,openness:1,transit:1}},
     ]},
@@ -3455,7 +3527,7 @@ let bookLoaded = false;
 function setSyncChip(){
   const chip = $('sync-chip');
   if (!chip) return;
-  const label = {local:'this device', cloud:'saved to the beacon', saving:'saving…', readonly:'read-only here'}[syncState];
+  const label = {local:'this device', cloud:'saved to the beacon', saving:'saving…', readonly:'read-only here', account:'synced to your account'}[syncState];
   chip.textContent = label;
   chip.classList.toggle('on', syncState==='cloud' || syncState==='saving');
 }
@@ -3478,6 +3550,16 @@ function persistBook(){
     p.updated = new Date().toISOString();
   }
   store.set('beacon-book', JSON.stringify(BOOK));
+  if (API.user){
+    clearTimeout(bookTimer);
+    syncState = 'saving'; setSyncChip();
+    bookTimer = setTimeout(()=>{
+      apiPushBook()
+        .then(()=>{ syncState = 'account'; setSyncChip(); })
+        .catch(()=>{ syncState = 'local'; setSyncChip(); });
+    }, 1200);
+    return;
+  }
   if (!AF || !activeProfile) return;
   clearTimeout(bookTimer);
   syncState = 'saving'; setSyncChip();
@@ -3510,16 +3592,16 @@ function renderProfiles(){
     const p = BOOK.profiles[activeProfile] || {};
     const last = (p.matches && p.matches.length)
       ? 'last search: ' + p.matches[0].name + ' ' + p.matches[0].score + '%' : 'no search saved yet';
-    html += '<div class="prof-active"><div><b>'+activeProfile+'</b>'+
-      '<div style="font-size:.75rem;color:var(--ink-soft)">'+last+'</div></div>'+
+    html += '<div class="prof-active"><div><b>'+esc(activeProfile)+'</b>'+
+      '<div style="font-size:.75rem;color:var(--ink-soft)">'+esc(last)+'</div></div>'+
       '<button class="ghost" id="prof-signout">set down</button></div>';
   }
   const others = Object.keys(BOOK.profiles).filter(n=>n!==activeProfile);
   html += others.map(n=>{
     const p = BOOK.profiles[n];
     const counts = ((p.jobs||[]).length) + ' jobs · ' + ((p.homes||[]).length) + ' homes';
-    return '<div class="prof-row" data-p="'+n.replace(/"/g,'&quot;')+'">'+
-      '<span class="pn">'+n+'<small>'+counts+'</small></span>'+
+    return '<div class="prof-row" data-p="'+esc(n)+'">'+
+      '<span class="pn">'+esc(n)+'<small>'+esc(counts)+'</small></span>'+
       '<span class="open-btn">pick up &rarr;</span></div>';
   }).join('');
   if (!activeProfile && !others.length){
@@ -3557,6 +3639,115 @@ function initBook(){
 }
 initBook();
 
+/* ---------- account sync (Cloudflare Pages Functions) ----------
+   Entirely optional: /api only exists on hosts that serve the
+   functions. Anywhere else (the artifact, a saved file) detection
+   fails fast and Beacon behaves exactly as before. */
+const API = { on:false, user:null };
+
+async function apiInit(){
+  /* one request decides everything: 200 means signed in, 401 means the
+     API exists but we are signed out, a network error means no API */
+  try{
+    const me = await fetch('/api/me', { signal: AbortSignal.timeout(4000) });
+    API.on = me.ok || me.status === 401;
+    if (me.ok){
+      API.user = (await me.json()).email;
+      await apiPullBook();
+    }
+  }catch(e){ API.on = false; }
+}
+
+async function apiPullBook(){
+  try{
+    const r = await fetch('/api/book');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.book && d.book.profiles){
+      BOOK = d.book;
+      if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile);
+      syncState = 'account'; setSyncChip();
+      updateBadge(); syncHearts();
+    } else { syncState = 'account'; setSyncChip(); }
+  }catch(e){}
+}
+
+async function apiPushBook(){
+  const r = await fetch('/api/book', {
+    method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(BOOK) });
+  if (!r.ok) throw new Error('push failed');
+}
+
+async function apiAuth(route){
+  const email = $('acct-email').value.trim();
+  const password = $('acct-pass').value;
+  const err = $('acct-err');
+  err.textContent = '';
+  try{
+    const r = await fetch('/api/' + route, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ email, password }) });
+    const d = await r.json();
+    if (!r.ok){ err.textContent = d.error || 'That did not work — try again.'; return; }
+    API.user = d.email;
+    $('acct-pass').value = '';
+    /* never eat this device's saves: union the account book with the
+       local one, then push the merge back up */
+    const existing = await fetch('/api/book').then(x=>x.ok?x.json():null).catch(()=>null);
+    BOOK = mergeBooks(existing && existing.book, BOOK);
+    if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile);
+    await apiPushBook().catch(()=>{});
+    syncState = 'account'; setSyncChip();
+    updateBadge(); syncHearts(); renderProfiles();
+    toast('Signed in — your lantern follows you now');
+  }catch(e){ err.textContent = 'Could not reach the beacon — try again.'; }
+}
+
+function renderAccount(){
+  const box = $('acct-body');
+  if (!box) return;
+  if (!API.on){ box.innerHTML = ''; return; }
+  /* the lantern-not-lockbox line was written for the artifact; above a
+     password form it reads alarming and wrong — say what is stored */
+  $('prof-copy').textContent = API.user
+    ? 'Your lantern is saved to your account. We store your email, a salted password hash, and your saved cities — nothing else.'
+    : 'Name a profile to keep things tidy on this device, or add an account below to carry your lantern across devices.';
+  if (API.user){
+    box.innerHTML = '<div class="acct-box"><div class="k">Your account</div>' +
+      '<div class="acct-row" style="align-items:center;justify-content:space-between">' +
+      '<span style="font-family:Newsreader,serif">' + esc(API.user) + '</span>' +
+      '<button class="ghost" id="acct-out">sign out</button></div></div>';
+    $('acct-out').onclick = async ()=>{
+      try{ await fetch('/api/logout', { method:'POST', headers:{'content-type':'application/json'} }); }catch(e){}
+      API.user = null;
+      /* leave nothing of the account behind on a shared machine */
+      BOOK = { v:1, profiles:{} };
+      store.set('beacon-book', JSON.stringify(BOOK));
+      activeProfile = null; store.set('beacon-profile','');
+      try{ saved = JSON.parse(store.get('beacon-lantern')||'[]'); }catch(e){ saved = []; }
+      try{ savedHomes = JSON.parse(store.get('beacon-homes')||'[]'); }catch(e){ savedHomes = []; }
+      updateBadge(); syncHearts();
+      syncState = AF ? 'cloud' : 'local'; setSyncChip();
+      renderAccount(); renderProfiles();
+      toast('Signed out — this device holds only its own lantern now');
+    };
+  } else {
+    box.innerHTML = '<div class="acct-box"><div class="k">Carry it across devices</div>' +
+      '<div class="acct-row"><input id="acct-email" type="email" placeholder="email" autocomplete="email">' +
+      '<input id="acct-pass" type="password" placeholder="password (8+)" autocomplete="current-password"></div>' +
+      '<div class="row" style="margin-top:.7rem"><button class="btn2" id="acct-in">sign in</button>' +
+      '<button class="btn2" id="acct-up">create account</button></div>' +
+      '<p class="acct-err" id="acct-err"></p>' +
+      '<p class="peek-note" style="text-align:left;margin:.5rem 0 0">We store your email, a salted password hash, and your saved cities — nothing else. No password reset exists yet, so keep it somewhere safe.</p></div>';
+    $('acct-in').onclick = ()=> apiAuth('login');
+    $('acct-up').onclick = ()=> apiAuth('signup');
+  }
+}
+
+/* nothing above the fold needs the API — stay off the critical path */
+if ('requestIdleCallback' in window) requestIdleCallback(()=>apiInit(), { timeout: 2500 });
+else setTimeout(apiInit, 1200);
+
 const jobId = (cityName, role, co)=> cityName+'|'+role+'|'+co;
 
 function persistLantern(){
@@ -3587,12 +3778,16 @@ function renderLantern(){
     items.forEach(s=>{ (groups[s.city] = groups[s.city]||[]).push(s); });
     return '<div class="lgroup" style="letter-spacing:.22em;color:var(--amber)">'+title+'</div>'+
       Object.keys(groups).map(cityName=>
-        '<div class="lgroup">'+cityName+'</div>'+
-        groups[cityName].map(s=>
-          '<div class="litem"><div><h5>'+line1(s)+'</h5>'+
-          '<div class="sub">'+line2(s)+'</div></div>'+
-          '<button class="ghost" data-id="'+s.id.replace(/"/g,'&quot;')+'" aria-label="Remove">&#10005;</button></div>'
-        ).join('')
+        '<div class="lgroup">'+esc(cityName)+'</div>'+
+        groups[cityName].map(s=>{
+          const href = s.url ? safeHttpUrl(s.url) : null;
+          const head = href
+            ? '<a href="'+esc(href)+'" target="_blank" rel="noopener" style="color:inherit">'+esc(line1(s))+' &nearr;</a>'
+            : esc(line1(s));
+          return '<div class="litem"><div><h5>'+head+'</h5>'+
+          '<div class="sub">'+esc(line2(s))+'</div></div>'+
+          '<button class="ghost" data-id="'+esc(s.id)+'" aria-label="Remove">&#10005;</button></div>';
+        }).join('')
       ).join('');
   };
   list.innerHTML =
@@ -3657,13 +3852,14 @@ function renderQuestion(){
       const picked = (answers[q.key]||[]).includes(v) ? ' picked' : '';
       html += '<button class="chip'+picked+'" data-v="'+v+'">'+o+'</button>';
     });
-    html += '</div><p class="q-hint" style="margin-top:1.1rem">pick as many as you like</p>';
+    html += '</div><p class="q-hint" style="margin-top:1.1rem">'+(q.hint||'pick as many as you like')+'</p>';
   } else if (q.type === 'chips'){
     html += '<div class="chips">';
     FIELDS.forEach(f=>{
       const picked = answers[q.key] === f.id ? ' picked' : '';
       html += '<button class="chip'+picked+'" data-f="'+f.id+'">'+f.label+'</button>';
     });
+    html += '<button class="chip'+(answers[q.key]===''?' picked':'')+'" data-f="">Not looking for work right now</button>';
     html += '</div>';
   }
   html += '</div>';
@@ -3708,6 +3904,7 @@ function renderQuestion(){
 
   const a0 = answers[q.key];
   $('q-next').disabled = a0 === undefined || (Array.isArray(a0) && a0.length === 0);
+  store.set('beacon-progress', JSON.stringify({ answers, qIndex }));
   $('q-next').textContent = qIndex === QUESTIONS.length-1 ? 'light the beacon' : 'continue';
 }
 
@@ -3736,6 +3933,7 @@ function runMatch(){
   computeUser();
   ranked = rankAll(CITIES, user, answers.field);
   matches = ranked.slice(0,3);
+  store.set('beacon-progress', '');
   renderResults();
   snapshotMatches();
   playReveal();
@@ -3768,8 +3966,11 @@ function endReveal(){
 function renderResults(){
   $('top-city-script').textContent = matches[0].city.name;
   if (user.passports && user.passports.length){
-    const open = CITIES.filter(c=>['home','union','free'].includes(access(user.passports, c.country))).length;
-    $('doors-sub').textContent = 'your passport opens ' + open + ' of ' + CITIES.length + ' of these cities without a visa';
+    const acc = CITIES.map(c=>access(user.passports, c.country));
+    const live = acc.filter(a=>a==='home'||a==='union').length;
+    const visit = acc.filter(a=>a==='free').length;
+    $('doors-sub').textContent = 'your passport lets you live & work in ' + live +
+      ' of these cities, and visit ' + visit + ' more visa-free — residence elsewhere needs its own visa';
   } else {
     $('doors-sub').textContent = '';
   }
@@ -3946,33 +4147,47 @@ async function renderShareCard(){
   x.font = '92px Ephesis, cursive';
   x.fillText('Beacon', W/2, 1140);
   x.shadowBlur = 0;
+  x.fillStyle = '#A7BBC0';
+  x.font = '600 30px Karla, sans-serif';
+  x.fillText('beacon-ejo.pages.dev', W/2, 1210);
 
-  $('share-img').src = cv.toDataURL('image/png');
+  cv.toBlob(b=>{
+    const img = $('share-img');
+    if (img.dataset.blobUrl) URL.revokeObjectURL(img.dataset.blobUrl);
+    img.src = img.dataset.blobUrl = URL.createObjectURL(b);
+  }, 'image/png');
 }
 
 function shareText(){
   return 'My Beacon cities — ' +
     matches.map((m,i)=>(i+1)+'. '+m.city.name+' '+m.score+'%').join('  ') +
     '  · ' + traitWords(user).join(', ') +
-    '  · Beacon: find the city that feels like you';
+    '  · find yours at beacon-ejo.pages.dev';
 }
 
 
 /* ================= jobs ================= */
 
-function renderJobList(city, items){
+function renderJobList(city, items, live){
   const list = $('job-list');
+  /* live listings and saved books are untrusted text: everything that
+     touches innerHTML goes through esc(), links through safeHttpUrl() */
   list.innerHTML = items.map(it=>{
     const id = jobId(city.name, it.role, it.co);
-    const title = it.url
-      ? '<a href="'+it.url+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">'+it.role+' &nearr;</a>'
-      : it.role;
+    const href = it.url ? safeHttpUrl(it.url) : null;
+    const title = href
+      ? '<a href="'+esc(href)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">'+esc(it.role)+' &nearr;</a>'
+      : esc(it.role);
     return '<div class="job"><div>'+
-      '<h4>'+title+'</h4><div class="co">'+it.co+' · '+city.name+'</div>'+
-      '<div class="meta"><span class="tag">'+it.mode+'</span><span class="tag pay">'+it.pay+'</span>'+
-      (it.alt?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">'+altLabel(it.field)+' · hiring here</span>':'')+
+      '<h4>'+title+'</h4><div class="co">'+esc(it.co)+' · '+esc(city.name)+'</div>'+
+      '<div class="meta"><span class="tag">'+esc(it.mode)+'</span><span class="tag pay">'+esc(it.pay)+'</span>'+
+      (it.alt?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">'+esc(altLabel(it.field))+' · hiring here</span>':'')+
+      (live?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">live</span>'
+           :'<span class="tag">sample</span>')+
       '</div></div>'+
-      '<button class="save" data-id="'+id.replace(/"/g,'&quot;')+'" data-role="'+it.role.replace(/"/g,'&quot;')+'" data-co="'+it.co.replace(/"/g,'&quot;')+'" data-mode="'+it.mode+'" data-pay="'+it.pay+'" aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
+      '<button class="save" data-id="'+esc(id)+'" data-role="'+esc(it.role)+'" data-co="'+esc(it.co)+'" data-mode="'+esc(it.mode)+'" data-pay="'+esc(it.pay)+'"'+
+      (href?' data-url="'+esc(href)+'"':'')+
+      ' aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
   }).join('');
 
   list.querySelectorAll('.save').forEach(btn=>{
@@ -3984,7 +4199,8 @@ function renderJobList(city, items){
         SFX.unsave();
         toast('Taken out of your lantern');
       } else {
-        saved.push({id, role:btn.dataset.role, co:btn.dataset.co, city:city.name, mode:btn.dataset.mode, pay:btn.dataset.pay});
+        saved.push({id, role:btn.dataset.role, co:btn.dataset.co, city:city.name,
+          mode:btn.dataset.mode, pay:btn.dataset.pay, url:btn.dataset.url || null});
         SFX.save();
         toast('Saved to your lantern');
       }
@@ -4007,13 +4223,32 @@ function showJobs(city){
   const jm = buildJobs(city, fieldId);
   $('jobs-sub').textContent = field.label + ' · ' + jm.note;
   $('jobs-src').textContent = {
-    strong: '\u25cf strong market · generated by formula, pay scaled to local cost of living',
-    steady: '\u25cf steady market · generated by formula, pay scaled to local cost of living',
-    thin:   '\u25cb thin market · the last three are where this city actually hires',
+    strong: '\u25cf strong market · sample roles, illustrative USD pay from the cost-of-living formula',
+    steady: '\u25cf steady market · sample roles, illustrative USD pay from the cost-of-living formula',
+    thin:   '\u25cb thin market · sample roles; the last three are what this city actually hires for',
   }[jm.market];
+  $('jobs-foot').innerHTML = 'These roles are a deterministic sample, not postings &mdash; pay is illustrative USD, not local wages. The link above searches real openings.';
+  $('jobs-links').innerHTML = '<a class="btn2" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.google.com/search?q='+
+    encodeURIComponent(FIELDS.find(f=>f.id===fieldId).label + ' jobs in ' + city.name + ' ' + city.country)+
+    '">search real openings &nearr;</a>';
 
   renderJobList(city, jm.listings);
   go('view-jobs');
+
+  /* live listings ride on top where the API exists; the formula stays the floor */
+  if (API.on){
+    fetch('/api/jobs?city=' + encodeURIComponent(city.name) +
+          '&country=' + encodeURIComponent(city.country) +
+          '&field=' + encodeURIComponent(fieldId))
+      .then(r => r.json())
+      .then(d => {
+        if (currentCity !== city || !d.live || !d.listings) return;
+        renderJobList(city, d.listings, true);
+        $('jobs-src').textContent = '\u25cf live listings · Adzuna, refreshed every few hours';
+        $('jobs-foot').innerHTML = 'Live listings via Adzuna &mdash; follow a role to the real posting. Saved roles keep their link in your lantern.';
+      })
+      .catch(()=>{});
+  }
 }
 
 
@@ -4074,14 +4309,10 @@ function openPeek(h){
   drawHomePortrait($('peek-canvas'), h, city);
   $('peek-title').textContent = h.title;
   $('peek-sub').textContent = h.quirk + ' — ' + h.hood + ', ' + city.name;
-  const fieldId = answers.field || 'remote';
-  const band = payBand(city, fieldId, 1).match(/\d+/g).map(Number);
-  const share = Math.round(h.rentN * 12 / ((band[0]+band[1])/2 * 1000) * 100);
   $('peek-meta').innerHTML =
-    '<span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
+    '<span class="tag pay">'+esc(h.rent)+'</span><span class="tag">'+esc(h.size)+'</span>'+
     (h.furnished?'<span class="tag">furnished</span>':'')+
-    '<span class="tag">'+h.walk+'</span>'+
-    '<span class="tag">≈ '+share+'% of a local '+FIELDS.find(f=>f.id===fieldId).label.toLowerCase()+' salary</span>';
+    '<span class="tag">'+esc(h.walk)+'</span>';
   const pk = $('peek-save');
   const on = savedHomes.some(s=>s.id===h.id);
   pk.textContent = on ? 'in your lantern ♥' : 'save to lantern ♡';
@@ -4102,7 +4333,7 @@ function showHomes(city){
   homesAll = genHomes(city);
   homeType = 'All';
   $('homes-city').textContent = city.name;
-  $('homes-sub').textContent = 'a sample of the market · one-bed median $'+baseRent(city).toLocaleString('en-US')+'/mo';
+  $('homes-sub').textContent = 'a sample of the market · typical city-centre one-bed $'+baseRent(city).toLocaleString('en-US')+'/mo';
   drawCitySky($('homes-canvas'), city);
   homeHood = 'All'; homeSort = 'price';
   $('home-types').innerHTML =
@@ -4131,7 +4362,11 @@ function showHomes(city){
   });
   chipSync();
   $('home-budget').value = 10;
-  $('home-budget').oninput = renderHomeList;
+  let homeRaf = 0;
+  $('home-budget').oninput = ()=>{
+    if (homeRaf) return;
+    homeRaf = requestAnimationFrame(()=>{ homeRaf = 0; renderHomeList(); });
+  };
   const portal = PORTALS[city.country];
   let links = '';
   if (portal){
@@ -4159,6 +4394,7 @@ function toast(msg){
 
 function restart(){
   answers = {}; qIndex = 0;
+  store.set('beacon-progress', '');
   go('view-hero');
 }
 
@@ -4167,7 +4403,14 @@ function restart(){
 
 $('begin').onclick = ()=>{
   startAudio();            /* gentle music begins with the journey */
-  qIndex = 0; renderQuestion(); go('view-quiz');
+  try{
+    const p = JSON.parse(store.get('beacon-progress') || 'null');
+    if (p && p.answers && p.qIndex > 0 && p.qIndex < QUESTIONS.length){
+      answers = p.answers; qIndex = p.qIndex;
+      toast('Picked up where you left off');
+    } else { qIndex = 0; }
+  }catch(e){ qIndex = 0; }
+  renderQuestion(); go('view-quiz');
 };
 $('q-next').onclick = ()=>{
   SFX.next();
@@ -4181,7 +4424,7 @@ $('jobs-back').onclick = ()=>go('view-results');
 $('jobs-homes').onclick = ()=>{ if (currentCity) showHomes(currentCity); };
 $('homes-back').onclick = ()=>go('view-results');
 $('homes-jobs').onclick = ()=>{ if (homesCity) showJobs(homesCity); };
-$('prof-fab').onclick = ()=>{ renderProfiles(); setSyncChip(); $('prof-modal').classList.add('on'); };
+$('prof-fab').onclick = ()=>{ renderAccount(); renderProfiles(); setSyncChip(); $('prof-modal').classList.add('on'); };
 $('prof-close').onclick = ()=> $('prof-modal').classList.remove('on');
 $('prof-modal').onclick = e=>{ if (e.target === $('prof-modal')) $('prof-modal').classList.remove('on'); };
 $('prof-create').onclick = ()=>{

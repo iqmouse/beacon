@@ -77,6 +77,7 @@ export const QUESTIONS = [
     ]},
   { type:'multichips', key:'passports',
     title:'Which passports do you hold?',
+    hint:'so we can show where you can live, work, or visit without a visa — "Somewhere else" is a fine answer',
     opts:['United States','Canada','United Kingdom','Ireland','Germany','France','Spain','Portugal','Italy','Netherlands','Another EU / EEA country','Switzerland','Australia','New Zealand','Japan','South Korea','Singapore','Malaysia','China','India','Thailand','Vietnam','Philippines','Indonesia','Brazil','Argentina','Mexico','Colombia','Chile','Turkey','United Arab Emirates','Israel','South Africa','Nigeria','Kenya','Egypt','Pakistan','Somewhere else'] },
   { type:'cards', key:'friday',
     title:'Friday, eleven p.m. Where are you?',
@@ -115,7 +116,7 @@ export const QUESTIONS = [
     title:'A city should feel…',
     opts:[
       {t:'Brand new and still rising', s:'cranes everywhere, everything opening soon', fx:{scale:1,pace:1,openness:1}},
-      {t:'Properly old', s:'buildings older than your home country', fx:{culture:2,scale:-1}},
+      {t:'Properly old', s:'walls that have seen a few empires', fx:{culture:2,scale:-1}},
       {t:'Wild at the edges', s:'green creeping in wherever it can', fx:{nature:2}},
       {t:'A bit of everything, worn in', s:'nothing matches and somehow it works', fx:{culture:1,openness:1,transit:1}},
     ]},

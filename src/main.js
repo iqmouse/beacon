@@ -1,4 +1,4 @@
-import { $, store, clamp } from './util.js';
+import { $, store, clamp, esc, safeHttpUrl, mergeBooks } from './util.js';
 import { FIELDS, CITIES, ROLES, MODES, payBand, CONTINENT_OF, CONTS } from './data.js';
 import { QUESTIONS } from './questions.js';
 import { DIMS, DIM_LABELS, buildUser, rankAll, traitWords, costFit } from './scoring.js';
@@ -57,7 +57,7 @@ let bookLoaded = false;
 function setSyncChip(){
   const chip = $('sync-chip');
   if (!chip) return;
-  const label = {local:'this device', cloud:'saved to the beacon', saving:'saving…', readonly:'read-only here'}[syncState];
+  const label = {local:'this device', cloud:'saved to the beacon', saving:'saving…', readonly:'read-only here', account:'synced to your account'}[syncState];
   chip.textContent = label;
   chip.classList.toggle('on', syncState==='cloud' || syncState==='saving');
 }
@@ -80,6 +80,16 @@ function persistBook(){
     p.updated = new Date().toISOString();
   }
   store.set('beacon-book', JSON.stringify(BOOK));
+  if (API.user){
+    clearTimeout(bookTimer);
+    syncState = 'saving'; setSyncChip();
+    bookTimer = setTimeout(()=>{
+      apiPushBook()
+        .then(()=>{ syncState = 'account'; setSyncChip(); })
+        .catch(()=>{ syncState = 'local'; setSyncChip(); });
+    }, 1200);
+    return;
+  }
   if (!AF || !activeProfile) return;
   clearTimeout(bookTimer);
   syncState = 'saving'; setSyncChip();
@@ -112,16 +122,16 @@ function renderProfiles(){
     const p = BOOK.profiles[activeProfile] || {};
     const last = (p.matches && p.matches.length)
       ? 'last search: ' + p.matches[0].name + ' ' + p.matches[0].score + '%' : 'no search saved yet';
-    html += '<div class="prof-active"><div><b>'+activeProfile+'</b>'+
-      '<div style="font-size:.75rem;color:var(--ink-soft)">'+last+'</div></div>'+
+    html += '<div class="prof-active"><div><b>'+esc(activeProfile)+'</b>'+
+      '<div style="font-size:.75rem;color:var(--ink-soft)">'+esc(last)+'</div></div>'+
       '<button class="ghost" id="prof-signout">set down</button></div>';
   }
   const others = Object.keys(BOOK.profiles).filter(n=>n!==activeProfile);
   html += others.map(n=>{
     const p = BOOK.profiles[n];
     const counts = ((p.jobs||[]).length) + ' jobs · ' + ((p.homes||[]).length) + ' homes';
-    return '<div class="prof-row" data-p="'+n.replace(/"/g,'&quot;')+'">'+
-      '<span class="pn">'+n+'<small>'+counts+'</small></span>'+
+    return '<div class="prof-row" data-p="'+esc(n)+'">'+
+      '<span class="pn">'+esc(n)+'<small>'+esc(counts)+'</small></span>'+
       '<span class="open-btn">pick up &rarr;</span></div>';
   }).join('');
   if (!activeProfile && !others.length){
@@ -159,6 +169,115 @@ function initBook(){
 }
 initBook();
 
+/* ---------- account sync (Cloudflare Pages Functions) ----------
+   Entirely optional: /api only exists on hosts that serve the
+   functions. Anywhere else (the artifact, a saved file) detection
+   fails fast and Beacon behaves exactly as before. */
+const API = { on:false, user:null };
+
+async function apiInit(){
+  /* one request decides everything: 200 means signed in, 401 means the
+     API exists but we are signed out, a network error means no API */
+  try{
+    const me = await fetch('/api/me', { signal: AbortSignal.timeout(4000) });
+    API.on = me.ok || me.status === 401;
+    if (me.ok){
+      API.user = (await me.json()).email;
+      await apiPullBook();
+    }
+  }catch(e){ API.on = false; }
+}
+
+async function apiPullBook(){
+  try{
+    const r = await fetch('/api/book');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.book && d.book.profiles){
+      BOOK = d.book;
+      if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile);
+      syncState = 'account'; setSyncChip();
+      updateBadge(); syncHearts();
+    } else { syncState = 'account'; setSyncChip(); }
+  }catch(e){}
+}
+
+async function apiPushBook(){
+  const r = await fetch('/api/book', {
+    method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(BOOK) });
+  if (!r.ok) throw new Error('push failed');
+}
+
+async function apiAuth(route){
+  const email = $('acct-email').value.trim();
+  const password = $('acct-pass').value;
+  const err = $('acct-err');
+  err.textContent = '';
+  try{
+    const r = await fetch('/api/' + route, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ email, password }) });
+    const d = await r.json();
+    if (!r.ok){ err.textContent = d.error || 'That did not work — try again.'; return; }
+    API.user = d.email;
+    $('acct-pass').value = '';
+    /* never eat this device's saves: union the account book with the
+       local one, then push the merge back up */
+    const existing = await fetch('/api/book').then(x=>x.ok?x.json():null).catch(()=>null);
+    BOOK = mergeBooks(existing && existing.book, BOOK);
+    if (activeProfile && BOOK.profiles[activeProfile]) adoptProfile(activeProfile);
+    await apiPushBook().catch(()=>{});
+    syncState = 'account'; setSyncChip();
+    updateBadge(); syncHearts(); renderProfiles();
+    toast('Signed in — your lantern follows you now');
+  }catch(e){ err.textContent = 'Could not reach the beacon — try again.'; }
+}
+
+function renderAccount(){
+  const box = $('acct-body');
+  if (!box) return;
+  if (!API.on){ box.innerHTML = ''; return; }
+  /* the lantern-not-lockbox line was written for the artifact; above a
+     password form it reads alarming and wrong — say what is stored */
+  $('prof-copy').textContent = API.user
+    ? 'Your lantern is saved to your account. We store your email, a salted password hash, and your saved cities — nothing else.'
+    : 'Name a profile to keep things tidy on this device, or add an account below to carry your lantern across devices.';
+  if (API.user){
+    box.innerHTML = '<div class="acct-box"><div class="k">Your account</div>' +
+      '<div class="acct-row" style="align-items:center;justify-content:space-between">' +
+      '<span style="font-family:Newsreader,serif">' + esc(API.user) + '</span>' +
+      '<button class="ghost" id="acct-out">sign out</button></div></div>';
+    $('acct-out').onclick = async ()=>{
+      try{ await fetch('/api/logout', { method:'POST', headers:{'content-type':'application/json'} }); }catch(e){}
+      API.user = null;
+      /* leave nothing of the account behind on a shared machine */
+      BOOK = { v:1, profiles:{} };
+      store.set('beacon-book', JSON.stringify(BOOK));
+      activeProfile = null; store.set('beacon-profile','');
+      try{ saved = JSON.parse(store.get('beacon-lantern')||'[]'); }catch(e){ saved = []; }
+      try{ savedHomes = JSON.parse(store.get('beacon-homes')||'[]'); }catch(e){ savedHomes = []; }
+      updateBadge(); syncHearts();
+      syncState = AF ? 'cloud' : 'local'; setSyncChip();
+      renderAccount(); renderProfiles();
+      toast('Signed out — this device holds only its own lantern now');
+    };
+  } else {
+    box.innerHTML = '<div class="acct-box"><div class="k">Carry it across devices</div>' +
+      '<div class="acct-row"><input id="acct-email" type="email" placeholder="email" autocomplete="email">' +
+      '<input id="acct-pass" type="password" placeholder="password (8+)" autocomplete="current-password"></div>' +
+      '<div class="row" style="margin-top:.7rem"><button class="btn2" id="acct-in">sign in</button>' +
+      '<button class="btn2" id="acct-up">create account</button></div>' +
+      '<p class="acct-err" id="acct-err"></p>' +
+      '<p class="peek-note" style="text-align:left;margin:.5rem 0 0">We store your email, a salted password hash, and your saved cities — nothing else. No password reset exists yet, so keep it somewhere safe.</p></div>';
+    $('acct-in').onclick = ()=> apiAuth('login');
+    $('acct-up').onclick = ()=> apiAuth('signup');
+  }
+}
+
+/* nothing above the fold needs the API — stay off the critical path */
+if ('requestIdleCallback' in window) requestIdleCallback(()=>apiInit(), { timeout: 2500 });
+else setTimeout(apiInit, 1200);
+
 const jobId = (cityName, role, co)=> cityName+'|'+role+'|'+co;
 
 function persistLantern(){
@@ -189,12 +308,16 @@ function renderLantern(){
     items.forEach(s=>{ (groups[s.city] = groups[s.city]||[]).push(s); });
     return '<div class="lgroup" style="letter-spacing:.22em;color:var(--amber)">'+title+'</div>'+
       Object.keys(groups).map(cityName=>
-        '<div class="lgroup">'+cityName+'</div>'+
-        groups[cityName].map(s=>
-          '<div class="litem"><div><h5>'+line1(s)+'</h5>'+
-          '<div class="sub">'+line2(s)+'</div></div>'+
-          '<button class="ghost" data-id="'+s.id.replace(/"/g,'&quot;')+'" aria-label="Remove">&#10005;</button></div>'
-        ).join('')
+        '<div class="lgroup">'+esc(cityName)+'</div>'+
+        groups[cityName].map(s=>{
+          const href = s.url ? safeHttpUrl(s.url) : null;
+          const head = href
+            ? '<a href="'+esc(href)+'" target="_blank" rel="noopener" style="color:inherit">'+esc(line1(s))+' &nearr;</a>'
+            : esc(line1(s));
+          return '<div class="litem"><div><h5>'+head+'</h5>'+
+          '<div class="sub">'+esc(line2(s))+'</div></div>'+
+          '<button class="ghost" data-id="'+esc(s.id)+'" aria-label="Remove">&#10005;</button></div>';
+        }).join('')
       ).join('');
   };
   list.innerHTML =
@@ -259,13 +382,14 @@ function renderQuestion(){
       const picked = (answers[q.key]||[]).includes(v) ? ' picked' : '';
       html += '<button class="chip'+picked+'" data-v="'+v+'">'+o+'</button>';
     });
-    html += '</div><p class="q-hint" style="margin-top:1.1rem">pick as many as you like</p>';
+    html += '</div><p class="q-hint" style="margin-top:1.1rem">'+(q.hint||'pick as many as you like')+'</p>';
   } else if (q.type === 'chips'){
     html += '<div class="chips">';
     FIELDS.forEach(f=>{
       const picked = answers[q.key] === f.id ? ' picked' : '';
       html += '<button class="chip'+picked+'" data-f="'+f.id+'">'+f.label+'</button>';
     });
+    html += '<button class="chip'+(answers[q.key]===''?' picked':'')+'" data-f="">Not looking for work right now</button>';
     html += '</div>';
   }
   html += '</div>';
@@ -310,6 +434,7 @@ function renderQuestion(){
 
   const a0 = answers[q.key];
   $('q-next').disabled = a0 === undefined || (Array.isArray(a0) && a0.length === 0);
+  store.set('beacon-progress', JSON.stringify({ answers, qIndex }));
   $('q-next').textContent = qIndex === QUESTIONS.length-1 ? 'light the beacon' : 'continue';
 }
 
@@ -338,6 +463,7 @@ function runMatch(){
   computeUser();
   ranked = rankAll(CITIES, user, answers.field);
   matches = ranked.slice(0,3);
+  store.set('beacon-progress', '');
   renderResults();
   snapshotMatches();
   playReveal();
@@ -370,8 +496,11 @@ function endReveal(){
 function renderResults(){
   $('top-city-script').textContent = matches[0].city.name;
   if (user.passports && user.passports.length){
-    const open = CITIES.filter(c=>['home','union','free'].includes(access(user.passports, c.country))).length;
-    $('doors-sub').textContent = 'your passport opens ' + open + ' of ' + CITIES.length + ' of these cities without a visa';
+    const acc = CITIES.map(c=>access(user.passports, c.country));
+    const live = acc.filter(a=>a==='home'||a==='union').length;
+    const visit = acc.filter(a=>a==='free').length;
+    $('doors-sub').textContent = 'your passport lets you live & work in ' + live +
+      ' of these cities, and visit ' + visit + ' more visa-free — residence elsewhere needs its own visa';
   } else {
     $('doors-sub').textContent = '';
   }
@@ -548,33 +677,47 @@ async function renderShareCard(){
   x.font = '92px Ephesis, cursive';
   x.fillText('Beacon', W/2, 1140);
   x.shadowBlur = 0;
+  x.fillStyle = '#A7BBC0';
+  x.font = '600 30px Karla, sans-serif';
+  x.fillText('beacon-ejo.pages.dev', W/2, 1210);
 
-  $('share-img').src = cv.toDataURL('image/png');
+  cv.toBlob(b=>{
+    const img = $('share-img');
+    if (img.dataset.blobUrl) URL.revokeObjectURL(img.dataset.blobUrl);
+    img.src = img.dataset.blobUrl = URL.createObjectURL(b);
+  }, 'image/png');
 }
 
 function shareText(){
   return 'My Beacon cities — ' +
     matches.map((m,i)=>(i+1)+'. '+m.city.name+' '+m.score+'%').join('  ') +
     '  · ' + traitWords(user).join(', ') +
-    '  · Beacon: find the city that feels like you';
+    '  · find yours at beacon-ejo.pages.dev';
 }
 
 
 /* ================= jobs ================= */
 
-function renderJobList(city, items){
+function renderJobList(city, items, live){
   const list = $('job-list');
+  /* live listings and saved books are untrusted text: everything that
+     touches innerHTML goes through esc(), links through safeHttpUrl() */
   list.innerHTML = items.map(it=>{
     const id = jobId(city.name, it.role, it.co);
-    const title = it.url
-      ? '<a href="'+it.url+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">'+it.role+' &nearr;</a>'
-      : it.role;
+    const href = it.url ? safeHttpUrl(it.url) : null;
+    const title = href
+      ? '<a href="'+esc(href)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">'+esc(it.role)+' &nearr;</a>'
+      : esc(it.role);
     return '<div class="job"><div>'+
-      '<h4>'+title+'</h4><div class="co">'+it.co+' · '+city.name+'</div>'+
-      '<div class="meta"><span class="tag">'+it.mode+'</span><span class="tag pay">'+it.pay+'</span>'+
-      (it.alt?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">'+altLabel(it.field)+' · hiring here</span>':'')+
+      '<h4>'+title+'</h4><div class="co">'+esc(it.co)+' · '+esc(city.name)+'</div>'+
+      '<div class="meta"><span class="tag">'+esc(it.mode)+'</span><span class="tag pay">'+esc(it.pay)+'</span>'+
+      (it.alt?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">'+esc(altLabel(it.field))+' · hiring here</span>':'')+
+      (live?'<span class="tag" style="background:var(--amber-glow);color:var(--amber)">live</span>'
+           :'<span class="tag">sample</span>')+
       '</div></div>'+
-      '<button class="save" data-id="'+id.replace(/"/g,'&quot;')+'" data-role="'+it.role.replace(/"/g,'&quot;')+'" data-co="'+it.co.replace(/"/g,'&quot;')+'" data-mode="'+it.mode+'" data-pay="'+it.pay+'" aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
+      '<button class="save" data-id="'+esc(id)+'" data-role="'+esc(it.role)+'" data-co="'+esc(it.co)+'" data-mode="'+esc(it.mode)+'" data-pay="'+esc(it.pay)+'"'+
+      (href?' data-url="'+esc(href)+'"':'')+
+      ' aria-label="Save this job" aria-pressed="false">&#9825;</button></div>';
   }).join('');
 
   list.querySelectorAll('.save').forEach(btn=>{
@@ -586,7 +729,8 @@ function renderJobList(city, items){
         SFX.unsave();
         toast('Taken out of your lantern');
       } else {
-        saved.push({id, role:btn.dataset.role, co:btn.dataset.co, city:city.name, mode:btn.dataset.mode, pay:btn.dataset.pay});
+        saved.push({id, role:btn.dataset.role, co:btn.dataset.co, city:city.name,
+          mode:btn.dataset.mode, pay:btn.dataset.pay, url:btn.dataset.url || null});
         SFX.save();
         toast('Saved to your lantern');
       }
@@ -609,13 +753,32 @@ function showJobs(city){
   const jm = buildJobs(city, fieldId);
   $('jobs-sub').textContent = field.label + ' · ' + jm.note;
   $('jobs-src').textContent = {
-    strong: '\u25cf strong market · generated by formula, pay scaled to local cost of living',
-    steady: '\u25cf steady market · generated by formula, pay scaled to local cost of living',
-    thin:   '\u25cb thin market · the last three are where this city actually hires',
+    strong: '\u25cf strong market · sample roles, illustrative USD pay from the cost-of-living formula',
+    steady: '\u25cf steady market · sample roles, illustrative USD pay from the cost-of-living formula',
+    thin:   '\u25cb thin market · sample roles; the last three are what this city actually hires for',
   }[jm.market];
+  $('jobs-foot').innerHTML = 'These roles are a deterministic sample, not postings &mdash; pay is illustrative USD, not local wages. The link above searches real openings.';
+  $('jobs-links').innerHTML = '<a class="btn2" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.google.com/search?q='+
+    encodeURIComponent(FIELDS.find(f=>f.id===fieldId).label + ' jobs in ' + city.name + ' ' + city.country)+
+    '">search real openings &nearr;</a>';
 
   renderJobList(city, jm.listings);
   go('view-jobs');
+
+  /* live listings ride on top where the API exists; the formula stays the floor */
+  if (API.on){
+    fetch('/api/jobs?city=' + encodeURIComponent(city.name) +
+          '&country=' + encodeURIComponent(city.country) +
+          '&field=' + encodeURIComponent(fieldId))
+      .then(r => r.json())
+      .then(d => {
+        if (currentCity !== city || !d.live || !d.listings) return;
+        renderJobList(city, d.listings, true);
+        $('jobs-src').textContent = '\u25cf live listings · Adzuna, refreshed every few hours';
+        $('jobs-foot').innerHTML = 'Live listings via Adzuna &mdash; follow a role to the real posting. Saved roles keep their link in your lantern.';
+      })
+      .catch(()=>{});
+  }
 }
 
 
@@ -676,14 +839,10 @@ function openPeek(h){
   drawHomePortrait($('peek-canvas'), h, city);
   $('peek-title').textContent = h.title;
   $('peek-sub').textContent = h.quirk + ' — ' + h.hood + ', ' + city.name;
-  const fieldId = answers.field || 'remote';
-  const band = payBand(city, fieldId, 1).match(/\d+/g).map(Number);
-  const share = Math.round(h.rentN * 12 / ((band[0]+band[1])/2 * 1000) * 100);
   $('peek-meta').innerHTML =
-    '<span class="tag pay">'+h.rent+'</span><span class="tag">'+h.size+'</span>'+
+    '<span class="tag pay">'+esc(h.rent)+'</span><span class="tag">'+esc(h.size)+'</span>'+
     (h.furnished?'<span class="tag">furnished</span>':'')+
-    '<span class="tag">'+h.walk+'</span>'+
-    '<span class="tag">≈ '+share+'% of a local '+FIELDS.find(f=>f.id===fieldId).label.toLowerCase()+' salary</span>';
+    '<span class="tag">'+esc(h.walk)+'</span>';
   const pk = $('peek-save');
   const on = savedHomes.some(s=>s.id===h.id);
   pk.textContent = on ? 'in your lantern ♥' : 'save to lantern ♡';
@@ -704,7 +863,7 @@ function showHomes(city){
   homesAll = genHomes(city);
   homeType = 'All';
   $('homes-city').textContent = city.name;
-  $('homes-sub').textContent = 'a sample of the market · one-bed median $'+baseRent(city).toLocaleString('en-US')+'/mo';
+  $('homes-sub').textContent = 'a sample of the market · typical city-centre one-bed $'+baseRent(city).toLocaleString('en-US')+'/mo';
   drawCitySky($('homes-canvas'), city);
   homeHood = 'All'; homeSort = 'price';
   $('home-types').innerHTML =
@@ -733,7 +892,11 @@ function showHomes(city){
   });
   chipSync();
   $('home-budget').value = 10;
-  $('home-budget').oninput = renderHomeList;
+  let homeRaf = 0;
+  $('home-budget').oninput = ()=>{
+    if (homeRaf) return;
+    homeRaf = requestAnimationFrame(()=>{ homeRaf = 0; renderHomeList(); });
+  };
   const portal = PORTALS[city.country];
   let links = '';
   if (portal){
@@ -761,6 +924,7 @@ function toast(msg){
 
 function restart(){
   answers = {}; qIndex = 0;
+  store.set('beacon-progress', '');
   go('view-hero');
 }
 
@@ -769,7 +933,14 @@ function restart(){
 
 $('begin').onclick = ()=>{
   startAudio();            /* gentle music begins with the journey */
-  qIndex = 0; renderQuestion(); go('view-quiz');
+  try{
+    const p = JSON.parse(store.get('beacon-progress') || 'null');
+    if (p && p.answers && p.qIndex > 0 && p.qIndex < QUESTIONS.length){
+      answers = p.answers; qIndex = p.qIndex;
+      toast('Picked up where you left off');
+    } else { qIndex = 0; }
+  }catch(e){ qIndex = 0; }
+  renderQuestion(); go('view-quiz');
 };
 $('q-next').onclick = ()=>{
   SFX.next();
@@ -783,7 +954,7 @@ $('jobs-back').onclick = ()=>go('view-results');
 $('jobs-homes').onclick = ()=>{ if (currentCity) showHomes(currentCity); };
 $('homes-back').onclick = ()=>go('view-results');
 $('homes-jobs').onclick = ()=>{ if (homesCity) showJobs(homesCity); };
-$('prof-fab').onclick = ()=>{ renderProfiles(); setSyncChip(); $('prof-modal').classList.add('on'); };
+$('prof-fab').onclick = ()=>{ renderAccount(); renderProfiles(); setSyncChip(); $('prof-modal').classList.add('on'); };
 $('prof-close').onclick = ()=> $('prof-modal').classList.remove('on');
 $('prof-modal').onclick = e=>{ if (e.target === $('prof-modal')) $('prof-modal').classList.remove('on'); };
 $('prof-create').onclick = ()=>{
