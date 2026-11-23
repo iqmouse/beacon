@@ -362,7 +362,110 @@ rather than estimated.
 
 ---
 
-## 7. Threats to validity and open problems
+## 7. Sensitivity analysis (computed)
+
+Open problem 5 of the first draft asked which questions actually drive
+outcomes and how fragile the ranking is to the designer-set weights. Both
+are now measured. The experiment is `tools/sensitivity.mjs` — zero
+dependencies, seed 42, about six seconds — and it begins by **asserting
+exact rank agreement between its injectable-weight reimplementation and
+the shipped `rankAll` on 25 random profiles**, so the numbers below
+provably describe the production model.
+
+### 7.1 Study A: question influence
+
+Design: $N = 1200$ answer vectors sampled uniformly over each question's
+domain; for each of the 27 questions, that answer alone is redrawn to a
+different value (one-at-a-time; 32,400 rankings total). Three statistics
+per question: the probability the top-1 city changes, the median rank the
+former #1 falls to, and the mean Jaccard overlap of the top-10 sets.
+
+| Question | P(top-1 flips) | Median fall of old #1 | Top-10 Jaccard |
+|---|---|---|---|
+| field | **65.7%** | 3 | 0.329 |
+| languages | 51.7% | 2 | 0.593 |
+| weather | 49.6% | 1 | 0.510 |
+| morning | 48.3% | 1 | 0.544 |
+| rain | 47.1% | 1 | 0.541 |
+| moving | 46.0% | 1 | 0.555 |
+| scale | 43.4% | 1 | 0.567 |
+| weekend | 38.9% | 1 | 0.643 |
+| noise | 38.6% | 1 | 0.633 |
+| window | 36.8% | 1 | 0.657 |
+| pace | 35.7% | 1 | 0.657 |
+| dinner | 35.5% | 1 | 0.650 |
+| langlearn | 30.4% | 1 | 0.761 |
+| friday | 29.1% | 1 | 0.694 |
+| passports | 28.8% | 1 | 0.702 |
+| social | 27.6% | 1 | 0.724 |
+| history | 27.3% | 1 | 0.725 |
+| foodie | 25.2% | 1 | 0.745 |
+| divcare | 25.0% | 1 | 0.736 |
+| green | 23.8% | 1 | 0.771 |
+| souvenir | 23.2% | 1 | 0.773 |
+| workstyle | 23.0% | 1 | 0.766 |
+| openness | 22.8% | 1 | 0.772 |
+| safecare | 21.7% | 1 | 0.749 |
+| budget | 19.6% | 1 | 0.768 |
+| safetrade | 6.1% | 1 | 0.921 |
+| worthit | **4.7%** | 1 | 0.935 |
+
+Findings:
+
+1. **The Section 3.7 wart is empirically the biggest lever in the model.**
+   The field question flips the top city 65.7% of the time and collapses
+   top-10 overlap to 0.33 — far ahead of any preference dimension. The
+   post-power additive bonus of 6 display points is large relative to
+   top-end score gaps (after the $x^{2.1}$ compression, adjacent
+   contenders are often within 1–3 points). What was flagged on aesthetic
+   grounds as a modeling wart is, measured, the dominant control surface.
+   Folding the industry match into the weighted mean as a fifteenth fit
+   dimension is now the clearly indicated fix, with this table as the
+   before-snapshot.
+2. **Changes are local, not chaotic.** For every question but field, the
+   median landing rank of a deposed #1 is second place — single answers
+   swap adjacent contenders rather than reshuffling the world, exactly
+   the behavior the ~2-point Lipschitz bound (Prop. 5) predicts for
+   sliders, extending empirically to the discrete questions.
+3. **Capabilities rank where they should.** Languages is the strongest
+   genuine dimension (51.7%), consistent with its design as a hard-ish
+   capability; passports lands mid-table (28.8%) because most sampled
+   passport sets reach most destinations at tier *free* or better.
+4. **Two questions are near-inert**: safetrade (6.1%) and worthit (4.7%)
+   only modulate conditionals that rarely bind. They remain defensible as
+   *expressive* questions — their answers change the story more than the
+   list — but a leaner instrument could drop or merge them; that is now a
+   design decision with a number attached rather than a hunch.
+
+*Caveat:* uniform redraw measures **elasticity to an answer change**, not
+variance explained under a realistic user distribution; a redrawn
+languages answer here usually means a different language entirely, which
+no real user does. The figures are upper-bound-flavored. A full variance
+decomposition (Sobol indices under an empirical answer prior) remains
+open — see Section 8.
+
+### 7.2 Study B: weight robustness (rank reversal)
+
+Design: 40 profiles × 10 perturbations, every weight multiplied by
+$\exp(0.1\,\mathcal{N}(0,1))$ — roughly ±10% log-normal noise on all 16
+weight parameters simultaneously.
+
+| Statistic | Value |
+|---|---|
+| P(top-1 changes) | 14.8% |
+| Mean top-3 Jaccard | 0.835 |
+| Mean Spearman $\rho$, all 173 ranks | **0.9951** |
+
+The classical rank-reversal critique of weighted-sum models mostly fails
+to bite: the global ordering is nearly invariant ($\rho = 0.995$) and the
+podium is stable *as a set* (Jaccard 0.835). The honest nuance is the #1
+*slot*: in one run of seven, ±10% weight wiggle promotes a runner-up.
+Beacon's presentation absorbs this gracefully — it ships a top **three**
+with per-dimension bars, not an oracle's single answer — but a paper
+should state it plainly: the model's precision is "these few cities," not
+"this exact city."
+
+## 8. Threats to validity and open problems
 
 Stated as research questions rather than apologies:
 
@@ -379,11 +482,12 @@ Stated as research questions rather than apologies:
 4. **Score calibration.** The percentage is an ordinal transform, not a
    probability of satisfaction. What *should* "87%" mean, and could it be
    anchored (e.g., to stated-satisfaction surveys of people who moved)?
-5. **Rank-reversal sensitivity.** Classical WSM critique: perturb $w$ by
-   $\pm\epsilon$ and measure Kendall-$\tau$ instability of the top-$k$;
-   Sobol/variance decomposition over the full answer space would identify
-   which questions actually drive outcomes (and which of the 27 could be
-   dropped).
+5. **Sensitivity, beyond one-at-a-time.** Section 7 settles the
+   first-order questions (influence ranking, weight robustness) but is
+   OAT under a uniform answer prior. Open: full Sobol decomposition with
+   interaction terms under an *empirical* answer distribution — and the
+   field-bonus refactor that Section 7.1 now demands, rerunning the table
+   after folding the bonus into the weighted mean.
 6. **External validity.** No ground truth exists for "your city." Proposed
    evaluations: convergent validity against independent rankings
    (Nomad List, Numbeo quality-of-life) on the overlapping construct;
@@ -395,13 +499,13 @@ Stated as research questions rather than apologies:
 
 ---
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 Everything in this document is runnable: `npm test` executes the 56-case
 suite (including every proposition's pinning test) with zero dependencies on
 Node ≥ 20; `node build.js` reproduces the shipped bundle byte-for-byte from
 source; the scoring module is importable standalone
 (`import { buildUser, rankAll } from './src/scoring.js'`). Data snapshots
-and their provenance are in `src/data.js` and the README. There is no
-training step, no seed to fix, and no environment variance to report —
+and their provenance are in `src/data.js` and the README. The sensitivity experiment reruns with `node tools/sensitivity.mjs` (seed 42,
+fixed in source). There is no training step and no environment variance to report —
 which is, in the end, the point.
