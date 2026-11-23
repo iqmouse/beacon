@@ -34,6 +34,10 @@ they could check by hand.** That constraint shaped everything:
 
 ## The matching engine
 
+> The full formalization — exact equations, propositions with proofs, the
+> test that pins each invariant, and the open problems — is in
+> [docs/METHODS.md](docs/METHODS.md), written to be developable into a paper.
+
 Each answer builds a profile across fourteen dimensions. Nine are a weighted
 symmetric fit (`1 − |you − city| / 10`): pace, nature, culture, social,
 climate, food, transit, openness, scale. The other five refuse to be
