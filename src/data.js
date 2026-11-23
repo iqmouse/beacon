@@ -1,11 +1,11 @@
 
-export /* Beacon data — 173 cities, hand-authored where judgment is honest
+/* Beacon data — 173 cities, hand-authored where judgment is honest
    and researched where numbers exist (rents, cost, safety: Numbeo;
    sunshine: Wikipedia climate tables — provenance in the README).
    Each city: ten 0-10 personality dims, languages, cost index,
    industries, real neighborhoods, five fictional employers, a voice
    line, and quick facts. */
-const FIELDS = [
+export const FIELDS = [
   {id:'tech',    label:'Tech & product'},
   {id:'creative',label:'Design & creative'},
   {id:'finance', label:'Finance'},
