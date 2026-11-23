@@ -493,9 +493,12 @@ Stated as research questions rather than apologies:
    (Nomad List, Numbeo quality-of-life) on the overlapping construct;
    test–retest is trivially perfect by Prop. 1 — a feature when the
    instrument is the object of study.
-7. **Data drift.** Rents, safety indices, and above all **visa rules** decay;
-   the rule system is group-level by design and dated. A paper version needs
-   a snapshot date and the update protocol.
+7. **Data drift.** Rents, safety indices, and above all **visa rules**
+   decay. The update protocol now exists: a quarterly pipeline
+   (`tools/data-refresh.mjs` + `data-refresh.yml`) re-fetches the
+   sources, opens a human-reviewed PR with the diff and a measured
+   ranking impact, and keeps the app deterministic per data release.
+   Visa rules remain manual — still the weakest link.
 
 ---
 

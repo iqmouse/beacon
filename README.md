@@ -119,6 +119,19 @@ saved file, the claude.ai artifact) Beacon behaves exactly as before.
 One-time setup: create a D1 database, put its id in `wrangler.toml`, apply
 `schema.sql`, and set `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` as Pages secrets.
 
+## Data freshness
+
+A quarterly GitHub Action (`data-refresh.yml`) re-fetches Numbeo's public
+rent, cost-of-living, and safety numbers, patches `src/data.js`, and opens
+a **pull request** whose body is a full diff report — large moves flagged,
+unmatched cities left untouched, and a measured ranking impact ("this
+update changes the top city for N% of sampled profiles", computed by the
+same seeded harness as the sensitivity analysis). A human reviews and
+merges; the app stays deterministic *per data release*, and every change
+is an auditable commit. Visa rules can't be fetched reliably, so the PR
+carries a manual checklist instead. One-time repo setting: allow GitHub
+Actions to create pull requests (Settings → Actions → General).
+
 ## Security model & known limits
 
 This section exists because a pre-launch review (three parallel reviewers

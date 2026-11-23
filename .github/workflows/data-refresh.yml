@@ -1,0 +1,43 @@
+name: Quarterly data refresh
+on:
+  schedule:
+    # 09:17 UTC on the 2nd of Jan / Apr / Jul / Oct
+    - cron: '17 9 2 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch Numbeo and apply candidate updates
+        run: node tools/data-refresh.mjs --write
+      - name: Tests must stay green on the new data
+        run: npm test
+      - name: Open the review PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet src/data.js; then
+            echo "No drift above thresholds this quarter."
+            exit 0
+          fi
+          QUARTER="$(date +%Y)-q$(( ($(date +%-m) - 1) / 3 + 1 ))"
+          BRANCH="data-refresh-$QUARTER"
+          git config user.name "beacon-data-refresh"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/data.js
+          git commit -m "Quarterly data refresh ($QUARTER): Numbeo rents, cost, safety"
+          git push -u origin "$BRANCH" --force
+          gh pr create \
+            --title "Quarterly data refresh — $QUARTER" \
+            --body-file build/data-refresh-report.md \
+            || echo "PR already exists for this branch; push updated it."

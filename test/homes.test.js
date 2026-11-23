@@ -25,7 +25,9 @@ test('home prices scale with the researched market rent', () => {
   const rich = CITIES.find(c => c.name === 'Zurich');
   const median = cs => genHomes(cs).map(h => h.rentN).sort((a, b) => a - b)[4];
   assert.ok(median(rich) > median(cheap) * 5);
-  assert.ok(baseRent(rich) > 3000 && baseRent(cheap) < 300);
+  /* relative, not absolute: data refreshes move the numbers, the
+     ordering between extremes is the invariant */
+  assert.ok(baseRent(rich) > baseRent(cheap) * 8);
 });
 
 test('slug strips accents for portal URLs', () => {
